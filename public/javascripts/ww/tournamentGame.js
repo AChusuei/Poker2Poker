@@ -48,8 +48,6 @@ require({
 			return table.findGameWinner();
 		}
 
-
-
 		// start Table object, regarding table position and dealing
 		function Table(players) {
 			// Lists all of the players at the table (even if they're out)
@@ -125,10 +123,10 @@ require({
 		function BlindStructure(startingStack, levels) {
 			this.startingStack = startingStack;
 			this.levels = levels;
-		}
+		};
 		BlindStructure.prototype.getBlindLevel = function() {
 			var blindLevelDetails = this.levels[this.currentLevel];
-			if (this.currentLevel = -1 || moment().diff(blindLevelDetails.timeStart, 'minutes') > blindLevelDetails.min)
+			if (this.currentLevel = -1 || moment().diff(blindLevelDetails.timeStart, 'minutes') > blindLevelDetails.min) {
 				currentLevel += 1;
 				this.levels[this.currentLevel].timeStart = moment();
 			}

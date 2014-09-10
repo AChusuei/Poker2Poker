@@ -32,5 +32,4 @@ requirejs(['jquery', 'react', 'peer', 'cards', 'bootstrap', 'playingCards', 'pla
 function($, react, peer, cards, bootstrap, playingCards, playingCardsUI, cardActions, peerActions) {
     // var p = peerActions.startPeer();
     // setTimeout(function() { p.destroy(); }, 5000);
-    _.each([1, 2, 3], alert);
 });

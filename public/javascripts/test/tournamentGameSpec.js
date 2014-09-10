@@ -1,6 +1,6 @@
-define(['underscore'], function() {
+define(['ww/tournamentGame'], function() {
 
-    describe('just checking', function() {
+    describe('A table', function() {
 
         it('works for underscore', function() {
             // just checking that _ works
