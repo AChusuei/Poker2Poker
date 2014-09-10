@@ -17,4 +17,8 @@ object Application extends Controller {
     Ok(views.html.bootstrap())
   }
 
+  def cors = Action {
+  	Ok(views.html.cors())
+  }
+
 }

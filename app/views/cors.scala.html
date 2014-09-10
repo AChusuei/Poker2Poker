@@ -1,0 +1,58 @@
+  <!DOCTYPE html>
+<html>
+<head>
+<title>Canvas Cross Origin Image Test: Testing for Canvas Cross Domain Image CORS Support</title>
+<script type="text/javascript">
+    function initialize() {
+
+        //will fail here if no canvas support
+        try {
+            var can = document.getElementById('mycanvas');
+            var ctx = can.getContext('2d');
+            var img = new Image();
+            img.crossOrigin = '';
+            //domain needs to be different from html page domain to test cross origin security
+            img.src = 'http://lobbydata.com/Content/images/bg_price2.gif';
+        } catch (ex) {
+            document.getElementById("results").innerHTML = "<span style='color:Red;'>Failed: " + ex.Message + "</span>";
+        }
+
+        //will fail here if security error
+        img.onload = function () {
+            try {
+                var start = new Date().getTime();
+                can.width = img.width;
+                can.height = img.height;
+                ctx.drawImage(img, 0, 0, img.width, img.height);
+                var url = can.toDataURL(); // if read succeeds, canvas isn't dirty.
+                //get pixels
+                var imgd = ctx.getImageData(0, 0, img.width, img.width);
+                var pix = imgd.data;
+                var len = pix.length;
+                var argb = []; //pixels as int
+                for (var i = 0; i < len; i += 4) {
+                    argb.push((pix[i + 3] << 24) + (pix[i] << 16) + (pix[i + 1] << 8) + pix[i + 2]);
+                }
+                var end = new Date().getTime();
+                var time = end - start;
+                document.getElementById("results").innerHTML = "<span style='color:Green;'>" +
+                "Success: Your browser supports CORS for cross domain images in Canvas <br>"+
+                "Read " + argb.length+ " pixels in "+ time+"ms</span>";
+            } catch (ex) {
+                document.getElementById("results").innerHTML = "<span style='color:Red;'>Failed: " + ex + "</span>";
+            }
+
+        }
+
+    }
+</script>
+</head>
+<body onload="initialize()">
+<h2>Canvas Cross Origin Image Test: Testing for Canvas Cross Domain Image CORS Support</h2>
+<h2><a href="http://blog.chromium.org/2011/07/using-cross-domain-images-in-webgl-and.html">What is CORS Image Security?</a></h2>
+<h1 id="results" style="color:Orange;">Testing...</h1>
+<canvas id="mycanvas"></canvas>
+<br />
+<a href="/Example/List">More Examples</a>
+</body>
+</html>
