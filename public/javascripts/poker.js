@@ -1,4 +1,4 @@
-define(['moment', 'underscore', 'playingCards'], function() {
+define(['moment', 'underscore', 'playingCards'], function(moment) {
 
     /*
      Start table object regarding table position and dealing.
@@ -78,12 +78,13 @@ define(['moment', 'underscore', 'playingCards'], function() {
 	function BlindStructure(startingStack, levels) {
 		this.startingStack = startingStack;
 		this.levels = levels;
+		this.currentLevel = -1; // initial getBlindLevel() will initialize this to zero;
+		this.lastTimeBlindsWentUp = null;
 	};
 	BlindStructure.prototype.getBlindLevel = function() {
-		var blindLevelDetails = this.levels[this.currentLevel];
-		if (this.currentLevel = -1 || moment().diff(blindLevelDetails.timeStart, 'minutes') > blindLevelDetails.min) {
-			currentLevel += 1;
-			this.levels[this.currentLevel].timeStart = moment();
+		if (this.currentLevel == -1 || moment().diff(this.lastTimeBlindsWentUp, 'minutes') > this.levels[this.currentLevel].min) {
+			this.currentLevel += 1;
+			this.lastTimeBlindsWentUp = moment();
 		}
 		return this.levels[this.currentLevel];
 	};
@@ -119,6 +120,16 @@ define(['moment', 'underscore', 'playingCards'], function() {
 		this.liveBet += bet;
 		return bet;
 	}
+	// Player is posting a blind.
+	// Just for synonymity
+	Player.prototype.postBlind = function(bet) {
+		if (bet > this.stack) {
+			bet = this.stack;
+		}
+		this.stack -= bet;
+		this.liveBet += bet;
+		return bet;
+	}
 	// Player calls to match a current bet.
 	// Returns the amount removed from the player's stack in order to make the call.
 	Player.prototype.call = function(totalBet) {
@@ -142,6 +153,7 @@ define(['moment', 'underscore', 'playingCards'], function() {
      */
 
      return {
-     	createPlayer : function(name, stack) { return new Player(name, stack); }
+     	createPlayer : function(name, stack) { return new Player(name, stack); },
+     	createBlindStructure : function(startingStack, levels) { return new BlindStructure(startingStack, levels); }
      }
 });

@@ -1,4 +1,55 @@
-define(['poker'], function(poker) {
+define(['poker', 'moment'], function(poker, moment) {
+
+    describe('The blind structure', function() {
+
+        var startingStack = 5000;
+        var levels = [
+            { sb: 15, bb:  30, a: 1, min: 10 },
+            { sb: 20, bb:  40, a: 2, min: 10 },
+            { sb: 25, bb:  50, a: 3, min: 10 }
+        ];
+
+        beforeEach(function() {
+            this.blindStructure = poker.createBlindStructure(startingStack, levels);
+        });
+
+        it('should be initialized properly', function() {
+            expect(this.blindStructure.startingStack).toEqual(startingStack);
+            expect(this.blindStructure.levels.length).toEqual(levels.length);
+        });
+
+        it('should pull the first blind level when getBlindLevel is called the first time', function() {
+            var testTime = moment();
+            var level = this.blindStructure.getBlindLevel();
+
+            expect(level.sb).toEqual(15);
+            expect(level.bb).toEqual(30);
+            expect(level.a).toEqual(1);
+            expect(this.blindStructure.currentLevel).toEqual(0);
+            expect(this.blindStructure.lastTimeBlindsWentUp.isAfter(testTime)).toBeTruthy();
+        });
+
+        it('should move to the next level when enough time has passed', function() {
+            var level = this.blindStructure.getBlindLevel();
+            var lastChangeTime = this.blindStructure.lastTimeBlindsWentUp.clone();
+            this.blindStructure.lastTimeBlindsWentUp.subtract(level.min + 2, 'minutes');
+
+            var newLevel = this.blindStructure.getBlindLevel();
+            expect(newLevel.sb).toEqual(20);
+            expect(newLevel.bb).toEqual(40);
+            expect(newLevel.a).toEqual(2);
+            expect(this.blindStructure.currentLevel).toEqual(1);
+            expect(this.blindStructure.lastTimeBlindsWentUp.isAfter(lastChangeTime)).toBeTruthy();
+        });
+
+
+        it('moment clone works?', function() {
+            var a = moment([2012]);
+            var b = a.clone();
+            a.year(2000);
+            expect(b.year()).toEqual(2012);
+        });
+    });
 
     describe('A player', function() {
 
