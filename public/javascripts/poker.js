@@ -154,6 +154,7 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 
      return {
      	createPlayer : function(name, stack) { return new Player(name, stack); },
-     	createBlindStructure : function(startingStack, levels) { return new BlindStructure(startingStack, levels); }
+     	createBlindStructure : function(startingStack, levels) { return new BlindStructure(startingStack, levels); },
+     	createTable : function(players) { return new Table(players); }
      }
 });

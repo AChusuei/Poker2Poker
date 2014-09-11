@@ -1,5 +1,7 @@
 define(['poker', 'moment'], function(poker, moment) {
 
+
+
     describe('The blind structure', function() {
 
         var startingStack = 5000;
@@ -29,7 +31,7 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(this.blindStructure.lastTimeBlindsWentUp.isAfter(testTime)).toBeTruthy();
         });
 
-        it('should move to the next level when enough time has passed', function() {
+        it('should move to the next level when the time for the level is up.', function() {
             var level = this.blindStructure.getBlindLevel();
             var lastChangeTime = this.blindStructure.lastTimeBlindsWentUp.clone();
             this.blindStructure.lastTimeBlindsWentUp.subtract(level.min + 2, 'minutes');
@@ -42,12 +44,17 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(this.blindStructure.lastTimeBlindsWentUp.isAfter(lastChangeTime)).toBeTruthy();
         });
 
+        it('should NOT move to the next level when the time for the level is not yet up', function() {
+            var level = this.blindStructure.getBlindLevel();
+            var lastChangeTime = this.blindStructure.lastTimeBlindsWentUp.clone();
 
-        it('moment clone works?', function() {
-            var a = moment([2012]);
-            var b = a.clone();
-            a.year(2000);
-            expect(b.year()).toEqual(2012);
+            // assuming the blind levels are at least a few seconds ...
+            var newLevel = this.blindStructure.getBlindLevel();
+            expect(level.sb).toEqual(15);
+            expect(level.bb).toEqual(30);
+            expect(level.a).toEqual(1);
+            expect(this.blindStructure.currentLevel).toEqual(0);
+            expect(this.blindStructure.lastTimeBlindsWentUp).toEqual(lastChangeTime);
         });
     });
 
