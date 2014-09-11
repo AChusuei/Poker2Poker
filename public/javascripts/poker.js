@@ -55,13 +55,12 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 		pot.amount = 0;
 		// get antes from every player.
 		_.each(this.players, function(player) { 
-			pot.amount += player.ante();
-		});
+			pot.amount += player.ante(this.blinds.ante);
+		}, this);
 		// Player after button posts small blind.
-		
-		pot.amount += this.nextLivePlayer.bet(this.blinds.sb);
+		pot.amount += this.nextLivePlayer().bet(this.blinds.smallBlind);
 		// Player after small blind posts big blind.
-		pot.amount += this.nextLivePlayer.bet(this.blinds.bb);
+		pot.amount += this.nextLivePlayer().bet(this.blinds.bigBlind);
 		return pot;
 	}
 	Table.prototype.playHand = function() {

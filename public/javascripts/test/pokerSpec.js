@@ -3,9 +3,9 @@ define(['poker', 'moment'], function(poker, moment) {
     var startingStack = 500;
 
     var levels = [
-        { sb: 15, bb:  30, a: 1, min: 10 },
-        { sb: 20, bb:  40, a: 2, min: 10 },
-        { sb: 25, bb:  50, a: 3, min: 10 }
+        { smallBlind: 15, bigBlind: 30, ante: 1, min: 10 },
+        { smallBlind: 20, bigBlind: 40, ante: 2, min: 10 },
+        { smallBlind: 25, bigBlind: 50, ante: 3, min: 10 }
     ];
 
     var allPlayers = [
@@ -25,6 +25,8 @@ define(['poker', 'moment'], function(poker, moment) {
                 newPlayers.push(poker.createPlayer(p.name, startingStack));
             });
             this.table = poker.createTable(newPlayers);
+            var blindStructure = poker.createBlindStructure(startingStack, levels);
+            this.table.blinds = blindStructure.getBlindLevel();
         });
 
         it('should have its players initialized and randomized properly', function() {
@@ -42,13 +44,13 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(matching).toBeFalsy();
         });
 
-        it('should choose the player after the button when nextLivePlayer is called for the first time', function() {
+        it('should choose the player after the button when nextLivePlayer() is called for the first time', function() {
             var nextPlayer = this.table.nextLivePlayer();
             expect((nextPlayer.seat == this.table.button + 1) || // button not on last player
                 (nextPlayer.seat == 0 && this.table.button == this.table.players.length - 1)).toBeTruthy();  // button on last player
         });
 
-        it('should only rotate to players who actually have chips', function() {
+        it('interacts only with players who actually have chips', function() {
             var playerGotFelted = this.table.nextLivePlayer();
             playerGotFelted.stack = 0;
             this.table.currentPlayer = this.table.button;
@@ -58,17 +60,50 @@ define(['poker', 'moment'], function(poker, moment) {
 
         it('should deal two cards to every player when everyone has chips in their stack', function() {
             this.table.dealCards();
-            _.each(this.table.players, function(p) {
-                console.info('player:' + p.name + ' | cards:' + p.hand);
-                expect(p.hand.length).toEqual(2);
+            _.each(this.table.players, function(player) {
+                // console.info('player:' + p.name + ' | cards:' + p.hand);
+                expect(player.hand.length).toEqual(2);
             });
         });
 
-        it('should deal cards only to players that have chips in their stack');
-        it('should only post blinds from the correct positions (after the button)');
+        it('should deal cards only to players that have chips in their stack', function() {
+            this.table.players[2].stack = 0;
+            this.table.players[4].stack = 0;
+            this.table.dealCards();
+            _.each(this.table.players, function(player, i) {
+                if (player.stack == 0) {
+                    expect(player.hand.length).toEqual(0);
+                } else {
+                    expect(player.hand.length).toEqual(2);    
+                }
+           });
+        });
+
+        it('should have an initial pot equal equal to (# of players * ante + big blind + small blind) after posting blinds and antes', function() {
+            var blindLevel = this.table.blinds;
+            var pot = this.table.postBlindsAndAntes();
+            expect(pot.amount).toEqual((this.table.players.length * blindLevel.ante) + blindLevel.smallBlind + blindLevel.bigBlind);
+        });
+
+        it('should only post blinds and antes from the correct positions (after the button)', function() {
+            var blindLevel = this.table.blinds;
+            var pot = this.table.postBlindsAndAntes();
+            // reset current player cursor to make it easier to find the players after the button
+            this.table.currentPlayer = this.table.button; 
+            var sbPlayer = this.table.nextLivePlayer();
+            var bbPlayer = this.table.nextLivePlayer();
+            expect(sbPlayer.stack).toEqual(startingStack - blindLevel.smallBlind - blindLevel.ante);
+            expect(bbPlayer.stack).toEqual(startingStack - blindLevel.bigBlind - blindLevel.ante);
+            // Check rest of table for antes withdrawal
+            while (this.table.nextLivePlayer().seat != this.table.button) {
+                var nonBlindPlayer = this.table.players[this.table.currentPlayer];
+                expect(nonBlindPlayer.stack).toEqual(startingStack - blindLevel.ante);
+            } 
+        });
+
         it('should only post blinds from players who still have chips');
         it('should make the button the small blind when it is heads up (two players)');
-        it('should have an initial pot equal to the (# of players * ante + big blind + small blind)');
+        
         it('should move the button to the next player');
         it('should move the button to the first player when button is at the end of the array');
         it('should have a winner when the only one person has chips remaining in their stack');
@@ -93,9 +128,9 @@ define(['poker', 'moment'], function(poker, moment) {
             var testTime = moment().subtract(1, 'ms'); // add just a tiny delay in case test runs too fast
             var level = this.blindStructure.getBlindLevel();
 
-            expect(level.sb).toEqual(15);
-            expect(level.bb).toEqual(30);
-            expect(level.a).toEqual(1);
+            expect(level.smallBlind).toEqual(15);
+            expect(level.bigBlind).toEqual(30);
+            expect(level.ante).toEqual(1);
             expect(this.blindStructure.currentLevel).toEqual(0);
             expect(this.blindStructure.lastTimeBlindsWentUp.isAfter(testTime)).toBeTruthy(); // failing intermittently?
         });
@@ -106,9 +141,9 @@ define(['poker', 'moment'], function(poker, moment) {
             this.blindStructure.lastTimeBlindsWentUp.subtract(level.min + 2, 'minutes');
 
             var newLevel = this.blindStructure.getBlindLevel();
-            expect(newLevel.sb).toEqual(20);
-            expect(newLevel.bb).toEqual(40);
-            expect(newLevel.a).toEqual(2);
+            expect(newLevel.smallBlind).toEqual(20);
+            expect(newLevel.bigBlind).toEqual(40);
+            expect(newLevel.ante).toEqual(2);
             expect(this.blindStructure.currentLevel).toEqual(1);
             expect(this.blindStructure.lastTimeBlindsWentUp.isAfter(lastChangeTime)).toBeTruthy();
         });
@@ -119,9 +154,9 @@ define(['poker', 'moment'], function(poker, moment) {
 
             // assuming the blind levels are at least a few seconds ...
             var newLevel = this.blindStructure.getBlindLevel();
-            expect(level.sb).toEqual(15);
-            expect(level.bb).toEqual(30);
-            expect(level.a).toEqual(1);
+            expect(level.smallBlind).toEqual(15);
+            expect(level.bigBlind).toEqual(30);
+            expect(level.ante).toEqual(1);
             expect(this.blindStructure.currentLevel).toEqual(0);
             expect(this.blindStructure.lastTimeBlindsWentUp).toEqual(lastChangeTime);
         });
