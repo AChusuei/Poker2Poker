@@ -1,15 +1,46 @@
 define(['poker', 'moment'], function(poker, moment) {
 
+    var startingStack = 500;
 
+    var levels = [
+        { sb: 15, bb:  30, a: 1, min: 10 },
+        { sb: 20, bb:  40, a: 2, min: 10 },
+        { sb: 25, bb:  50, a: 3, min: 10 }
+    ];
+    var allPlayers = [
+        { name: 'Christina Park', id: 'sparky' },
+        { name: 'Hyo Jin Chung', peerId: 'jin' },
+        { name: 'Minhee Cho', peerId: 'minnie' },
+        { name: 'Alan Chusuei', peerId: 'lockheart' },
+        { name: 'Simon Park', peerId: 'ttt' },
+        { name: 'Will Lee', peerId: 'nerdz' }, 
+    ];
 
-    describe('The blind structure', function() {
+    describe('A Table', function() {
 
-        var startingStack = 5000;
-        var levels = [
-            { sb: 15, bb:  30, a: 1, min: 10 },
-            { sb: 20, bb:  40, a: 2, min: 10 },
-            { sb: 25, bb:  50, a: 3, min: 10 }
-        ];
+        beforeEach(function() {
+            var newPlayers = [];
+            _.each(allPlayers, function(p) {
+                newPlayers.push(poker.createPlayer(p.name, startingStack));
+            });
+            this.table = poker.createTable(newPlayers);
+        });
+
+        it('should be initialized properly', function() {
+            expect(this.table.players.length).toEqual(allPlayers.length);
+            // Check that player order was randomized.
+            var matching = true;
+            for (p = 0; p < allPlayers.length; p++) {
+                console.info('original:' + allPlayers[p].name + ' | new:' + this.table.players[p].name);
+                if (allPlayers[p].name != this.table.players[p].name) {
+                    matching = false;
+                }
+            }
+            expect(matching).toBeFalsy();
+        });
+    });
+
+    describe('A BlindStructure', function() {
 
         beforeEach(function() {
             this.blindStructure = poker.createBlindStructure(startingStack, levels);
@@ -58,10 +89,9 @@ define(['poker', 'moment'], function(poker, moment) {
         });
     });
 
-    describe('A player', function() {
+    describe('A Player', function() {
 
         var name = 'alan';
-        var startingStack = 500;
         var tinyBet = 5;
         var smallBet = 50;
 

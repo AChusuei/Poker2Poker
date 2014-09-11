@@ -22,7 +22,7 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 		}
 	}
 	Table.prototype.nextLivePlayer = function() {
-		if (this.button == this.players.length) {
+		if (this.currentPlayer == this.players.length) {
 			this.currentPlayer = 0;
 		} else {
 			this.currentPlayer += 1;
@@ -63,6 +63,9 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 		// for now pick random player as winner. 
 		var winner = Math.floor((Math.random() * this.players.length));
 		table.players[winner].stack += table.pot.amount;
+	}
+	Table.prototype.moveButton = function() {
+		this.button
 	}
 	Table.prototype.findGameWinner = function() {
 		// Someone should have chips remaining, otherwise something REALLY REALLY wrong happened here.
