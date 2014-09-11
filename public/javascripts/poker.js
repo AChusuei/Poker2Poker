@@ -9,7 +9,8 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 		// Index of player with the button.
 		this.button = Math.floor((Math.random() * this.players.length));
 		// Index of player to whom action is on.
-		this.cardDeck = new playingCards();
+		this.currentPlayer = this.button;
+		this.deck = new playingCards();
 		this.pots = [];
 		this.blinds = null;
 	}
@@ -17,28 +18,37 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 		this.players = [];
 		while (players.length > 0) {
 			var randomIndex = Math.floor((Math.random() * players.length));
+			players[randomIndex].seat = this.players.length;
 			this.players.push(players[randomIndex]);
-			players.splice(randomIndex, 1);		
+			players.splice(randomIndex, 1);
 		}
 	}
 	Table.prototype.nextLivePlayer = function() {
-		if (this.currentPlayer == this.players.length) {
-			this.currentPlayer = 0;
-		} else {
-			this.currentPlayer += 1;
-		}
-		return this.players[currentPlayer];
+		do {
+			if (this.currentPlayer == this.players.length - 1) {
+				this.currentPlayer = 0;
+			} else {
+				this.currentPlayer += 1;
+			}
+		} while (this.players[this.currentPlayer].stack == 0)
+		return this.players[this.currentPlayer];
 	}
 	Table.prototype.dealCards = function() {
-		this.cardDeck.shuffle();
+		this.deck.shuffle();
+		// clear all player hands 
+		_.each(this.players, function(p) {
+			p.hand = [];
+		});
+		
 		_.chain(this.players)
-		    .filter(players, function(p) { return p.stack > 0; } ) // only deal cards to players with chips remaining
-			.each(this.players, function(player) { 
-				player.hand == []; 
-				// draw two cards per player.
-				player.hand.push(this.cardDeck.drawCard());
-				player.hand.push(this.cardDeck.drawCard());
-			});
+		     // only deal cards to players with chips remaining
+		    .filter(function(p) { return p.stack > 0; } )
+			.each(function(p) {
+				var f = this.deck.draw();
+				var s = this.deck.draw();
+				p.hand.push(f, s);
+			}, this);
+		
 	}
 	Table.prototype.postBlindsAndAntes = function() {
 		var pot = {};
@@ -48,6 +58,7 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 			pot.amount += player.ante();
 		});
 		// Player after button posts small blind.
+		
 		pot.amount += this.nextLivePlayer.bet(this.blinds.sb);
 		// Player after small blind posts big blind.
 		pot.amount += this.nextLivePlayer.bet(this.blinds.bb);
@@ -65,7 +76,12 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 		table.players[winner].stack += table.pot.amount;
 	}
 	Table.prototype.moveButton = function() {
-		this.button
+		nextLivePlayer
+		if (this.button == this.players.length - 1) {
+			this.button = 0;
+		} else {
+			this.button += 1;
+		}
 	}
 	Table.prototype.findGameWinner = function() {
 		// Someone should have chips remaining, otherwise something REALLY REALLY wrong happened here.

@@ -7,6 +7,7 @@ define(['poker', 'moment'], function(poker, moment) {
         { sb: 20, bb:  40, a: 2, min: 10 },
         { sb: 25, bb:  50, a: 3, min: 10 }
     ];
+
     var allPlayers = [
         { name: 'Christina Park', id: 'sparky' },
         { name: 'Hyo Jin Chung', peerId: 'jin' },
@@ -26,17 +27,54 @@ define(['poker', 'moment'], function(poker, moment) {
             this.table = poker.createTable(newPlayers);
         });
 
-        it('should be initialized properly', function() {
+        it('should have its players initialized and randomized properly', function() {
             expect(this.table.players.length).toEqual(allPlayers.length);
             // Check that player order was randomized.
             var matching = true;
-            for (p = 0; p < allPlayers.length; p++) {
-                console.info('original:' + allPlayers[p].name + ' | new:' + this.table.players[p].name);
-                if (allPlayers[p].name != this.table.players[p].name) {
+            _.each(allPlayers, function(player, p) {
+                expect(this.table.players[p].seat).toEqual(p);
+                expect(this.table.players[p].stack).toEqual(startingStack);
+                // console.info('original:' + allPlayers[p].name + ' | new:' + this.table.players[p].name + '(' + this.table.players[p].seat + ')');
+                if (player.name != this.table.players[p].name) {
                     matching = false;
                 }
-            }
+            }, this);
             expect(matching).toBeFalsy();
+        });
+
+        it('should choose the player after the button when nextLivePlayer is called for the first time', function() {
+            var nextPlayer = this.table.nextLivePlayer();
+            expect((nextPlayer.seat == this.table.button + 1) || // button not on last player
+                (nextPlayer.seat == 0 && this.table.button == this.table.players.length - 1)).toBeTruthy();  // button on last player
+        });
+
+        it('should only rotate to players who actually have chips', function() {
+            var playerGotFelted = this.table.nextLivePlayer();
+            playerGotFelted.stack = 0;
+            this.table.currentPlayer = this.table.button;
+            var playerWithChips = this.table.nextLivePlayer();
+            expect(playerWithChips).not.toEqual(playerGotFelted);
+        });
+
+        it('should deal two cards to every player when everyone has chips in their stack', function() {
+            this.table.dealCards();
+            _.each(this.table.players, function(p) {
+                console.info('player:' + p.name + ' | cards:' + p.hand);
+                expect(p.hand.length).toEqual(2);
+            });
+        });
+
+        it('should deal cards only to players that have chips in their stack');
+        it('should only post blinds from the correct positions (after the button)');
+        it('should only post blinds from players who still have chips');
+        it('should make the button the small blind when it is heads up (two players)');
+        it('should have an initial pot equal to the (# of players * ante + big blind + small blind)');
+        it('should move the button to the next player');
+        it('should move the button to the first player when button is at the end of the array');
+        it('should have a winner when the only one person has chips remaining in their stack');
+        it('should not have a winner when more than one player still has chips');
+        xit('should have more tests for playing hands', function() {
+            
         });
     });
 
@@ -52,14 +90,14 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should pull the first blind level when getBlindLevel is called the first time', function() {
-            var testTime = moment();
+            var testTime = moment().subtract(1, 'ms'); // add just a tiny delay in case test runs too fast
             var level = this.blindStructure.getBlindLevel();
 
             expect(level.sb).toEqual(15);
             expect(level.bb).toEqual(30);
             expect(level.a).toEqual(1);
             expect(this.blindStructure.currentLevel).toEqual(0);
-            expect(this.blindStructure.lastTimeBlindsWentUp.isAfter(testTime)).toBeTruthy();
+            expect(this.blindStructure.lastTimeBlindsWentUp.isAfter(testTime)).toBeTruthy(); // failing intermittently?
         });
 
         it('should move to the next level when the time for the level is up.', function() {
