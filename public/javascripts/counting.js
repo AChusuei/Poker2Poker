@@ -1,8 +1,10 @@
-importScripts('../require.js');
+if('undefined' === typeof window) {
+	importScripts('require.js');
+}
 
 require({
-        baseUrl: "../"
-    }, ['moment'], function() {
+        baseUrl: ''
+    }, ['moment', 'underscore', 'playingCards'], function() {
 	
 		onmessage = function (event) {
 			if (event.data == "start") {
