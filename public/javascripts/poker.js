@@ -57,10 +57,17 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 		_.each(this.players, function(player) { 
 			pot.amount += player.ante(this.blinds.ante);
 		}, this);
-		// Player after button posts small blind.
-		pot.amount += this.nextLivePlayer().bet(this.blinds.smallBlind);
-		// Player after small blind posts big blind.
-		pot.amount += this.nextLivePlayer().bet(this.blinds.bigBlind);
+		if (this.players.length == 2) {
+			// We are heads up; Button posts small blind.
+			pot.amount += this.players[this.button].bet(this.blinds.smallBlind);
+			// Non-button player posts big blind.
+			pot.amount += this.nextLivePlayer().bet(this.blinds.bigBlind);		
+		} else { 
+			// Player after button posts small blind.
+			pot.amount += this.nextLivePlayer().bet(this.blinds.smallBlind);
+			// Player after small blind posts big blind.
+			pot.amount += this.nextLivePlayer().bet(this.blinds.bigBlind);	
+		}
 		return pot;
 	}
 	Table.prototype.playHand = function() {
@@ -75,16 +82,21 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 		table.players[winner].stack += table.pot.amount;
 	}
 	Table.prototype.moveButton = function() {
-		nextLivePlayer
 		if (this.button == this.players.length - 1) {
 			this.button = 0;
 		} else {
 			this.button += 1;
 		}
+		this.currentPlayer = this.button;
 	}
 	Table.prototype.findGameWinner = function() {
 		// Someone should have chips remaining, otherwise something REALLY REALLY wrong happened here.
-		return _.filter(this.players, function(p) { return p.stack > 0; } ).length == 1;
+		var winners = _.filter(this.players, function(p) { return p.stack > 0; } );
+		if (winners.length == 1) {
+			return winners[0];
+		} else {
+			return null;
+		}
 	}
 	/*
      End Table object.

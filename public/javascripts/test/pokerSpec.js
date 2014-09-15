@@ -93,7 +93,9 @@ define(['poker', 'moment'], function(poker, moment) {
             var sbPlayer = this.table.nextLivePlayer();
             var bbPlayer = this.table.nextLivePlayer();
             expect(sbPlayer.stack).toEqual(startingStack - blindLevel.smallBlind - blindLevel.ante);
+            expect(sbPlayer.liveBet).toEqual(blindLevel.smallBlind);
             expect(bbPlayer.stack).toEqual(startingStack - blindLevel.bigBlind - blindLevel.ante);
+            expect(bbPlayer.liveBet).toEqual(blindLevel.bigBlind);
             // Check rest of table for antes withdrawal
             while (this.table.nextLivePlayer().seat != this.table.button) {
                 var nonBlindPlayer = this.table.players[this.table.currentPlayer];
@@ -101,13 +103,66 @@ define(['poker', 'moment'], function(poker, moment) {
             } 
         });
 
-        it('should only post blinds from players who still have chips');
-        it('should make the button the small blind when it is heads up (two players)');
+        it('should only post blinds from players who still have chips', function() {
+            var blindLevel = this.table.blinds;
+            // reset current player cursor to make it easier to find the players after the button
+            this.table.button = 0;
+            this.table.currentPlayer = this.table.button; 
+            this.table.players[1].stack = 0;
+            this.table.postBlindsAndAntes();
+            expect(this.table.players[1].liveBet).toEqual(0);
+            expect(this.table.players[2].stack).toEqual(startingStack - blindLevel.smallBlind - blindLevel.ante);
+            expect(this.table.players[2].liveBet).toEqual(blindLevel.smallBlind);
+            expect(this.table.players[3].stack).toEqual(startingStack - blindLevel.bigBlind - blindLevel.ante);
+            expect(this.table.players[3].liveBet).toEqual(blindLevel.bigBlind);
+        });
+
+        it('should make the button the small blind when it is heads up (two players)', function() {
+            var newPlayers = [];
+            _.each(_.sample(allPlayers, 2), function(p) {
+                newPlayers.push(poker.createPlayer(p.name, startingStack));
+            });
+            this.table = poker.createTable(newPlayers);
+            var blindStructure = poker.createBlindStructure(startingStack, levels);
+            this.table.blinds = blindStructure.getBlindLevel();
+            var blindLevel = this.table.blinds;
+            // reset current player cursor to make it easier to find the players after the button
+            this.table.button = 0;
+            this.table.currentPlayer = this.table.button; 
+            this.table.postBlindsAndAntes();
+            expect(this.table.players[0].liveBet).toEqual(blindLevel.smallBlind);
+            expect(this.table.players[0].stack).toEqual(startingStack - blindLevel.smallBlind - blindLevel.ante);
+            expect(this.table.players[1].liveBet).toEqual(blindLevel.bigBlind);
+            expect(this.table.players[1].stack).toEqual(startingStack - blindLevel.bigBlind - blindLevel.ante);
+        });
         
-        it('should move the button to the next player');
-        it('should move the button to the first player when button is at the end of the array');
-        it('should have a winner when the only one person has chips remaining in their stack');
-        it('should not have a winner when more than one player still has chips');
+        it('should move the button to the next player', function() {
+            var originalButton = this.table.button;
+            this.table.moveButton();
+            if (originalButton == this.table.players.length - 1) {
+                expect(this.table.button).toEqual(0);
+            } else {
+                expect(this.table.button).toEqual(originalButton+ 1);
+            }
+        });
+
+        it('should have a winner when the only one person has chips remaining in their stack', function() {
+            var winnerIndex = Math.floor((Math.random() * this.table.players.length));
+            _.each(this.table.players, function(player) {
+                player.stack = 0;
+            });
+            this.table.players[winnerIndex].stack = 5000;
+            var winner = this.table.findGameWinner();
+            expect(winner).toBeTruthy();
+            expect(winner).toEqual(this.table.players[winnerIndex]);
+        });
+
+        it('should not have a winner when more than one player still has chips', function() {
+            this.table.players[2].stack = 0;
+            var winner = this.table.findGameWinner();
+            expect(winner).toBeFalsy();
+        });
+
         xit('should have more tests for playing hands', function() {
             
         });
@@ -125,7 +180,8 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should pull the first blind level when getBlindLevel is called the first time', function() {
-            var testTime = moment().subtract(1, 'ms'); // add just a tiny delay in case test runs too fast
+            // add just a tiny delay in case test runs too fast
+            var testTime = moment().subtract(1, 'ms');
             var level = this.blindStructure.getBlindLevel();
 
             expect(level.smallBlind).toEqual(15);
@@ -137,7 +193,8 @@ define(['poker', 'moment'], function(poker, moment) {
 
         it('should move to the next level when the time for the level is up.', function() {
             var level = this.blindStructure.getBlindLevel();
-            var lastChangeTime = this.blindStructure.lastTimeBlindsWentUp.clone();
+            // add just a tiny delay in case test runs too fast
+            var lastChangeTime = this.blindStructure.lastTimeBlindsWentUp.clone().subtract(1, 'ms');
             this.blindStructure.lastTimeBlindsWentUp.subtract(level.min + 2, 'minutes');
 
             var newLevel = this.blindStructure.getBlindLevel();
