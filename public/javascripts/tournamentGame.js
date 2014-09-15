@@ -6,7 +6,7 @@ require(['moment', 'underscore', 'playingCards'], function() {
 
 		onmessage = function (event) {
 			if (event.data == "start") {
-				count();
+				startTournamentGame();
 			}
 		}
 
@@ -17,7 +17,7 @@ require(['moment', 'underscore', 'playingCards'], function() {
 				table.blinds = blindStructure.checkBlindLevel();
 				table.dealCards(); // must deal cards based on who has chips, before posting blinds.
 				table.postBlindsAndAntes();
-				playHand(table);
+				table.playRound(); // meat of the game logic.
 				table.moveButton();
 			} while (!table.findGameWinner());
 			return table.findGameWinner();

@@ -1,5 +1,17 @@
 define(['moment', 'underscore', 'playingCards'], function(moment) {
 
+	/* 
+	 Evaluates given cards to best five card poker hand.
+	 */
+	function HandEvaluator(cards) {
+		if (cards.length != 7) {
+			throw('Wrong number of cards given to evaluator:' + cards.length);
+		}
+	}
+	HandEvaluator.prototype = {
+
+	}
+
     /*
      Start table object regarding table position and dealing.
      */
@@ -51,8 +63,7 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 				}, this);
 		},
 		postBlindsAndAntes: function() {
-			var pot = {};
-			pot.amount = 0;
+			var pot = this.startPot();
 			// get antes from every player.
 			_.each(this.players, function(player) { 
 				pot.amount += player.ante(this.blinds.ante);
@@ -64,15 +75,20 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 				pot.amount += this.nextLivePlayer().bet(this.blinds.bigBlind);		
 			} else { 
 				// Player after button posts small blind.
-				pot.amount += this.nextLivePlayer().bet(this.blinds.smallBlind);
+				var sbPlayer = this.nextLivePlayer();
+				var sbBet = sbPlayer.bet(this.blinds.smallBlind);
+				pot.build(sbBet, sbPlayer);
 				// Player after small blind posts big blind.
-				pot.amount += this.nextLivePlayer().bet(this.blinds.bigBlind);	
+				var bbPlayer = this.nextLivePlayer();
+				var bbBet = bbPlayer.bet(this.blinds.bigBlind);
+				pot.build(bbBet, bbPlayer);
 			}
 			return pot;
 		},
-		playHand: function() {
-			pots.push({ amount : 0 });
-			// take random amount from each player. 
+		playRound: function() {
+			// Set up main pot.
+			pots = [ this.postBlindsAndAntes() ];
+			// Take random amount from each player. 
 			var amt = Math.floor((Math.random() * this.players.length));
 			_.each(this.players, function(player) { 
 				pots[0].amount += player.bet(amt);
@@ -98,13 +114,35 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 				return null;
 			}
 		},
+		startPot: function() {
+			return new Pot();
+		},
 	}
 	/*
      End Table object.
      */
 
+    /*
+     Contains information about one pot for a given round of play.
+     Note that one hand may have several pots, a main pot some side pots.
+     */
+    function Pot() {
+    	this.amount = 0;
+    	this.players = {};
+    }
+    Pot.prototype = {
+    	build: function(bet, player) {
+    		this.amount += bet;
+    		// Adds to list if player isn't there.
+    		this.players[player.name] = true; 
+    	},
+    	isEligible: function(player) {
+    		return (player.name in this.players);
+    	}
+    }
+
 	/*
-     Start BlindStructure object: holds blind levels of the game.
+     BlindStructure: holds blind levels of the game.
      */
 	function BlindStructure(startingStack, levels) {
 		this.startingStack = startingStack;
@@ -182,14 +220,28 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 			this.stack = 0;
 			return rest;
 		},
+		awardPot: function(potAmount) {
+			this.stack += potAmount;
+		}
 	}
 	/*
      End Player object.
      */
 
-     return {
+    /* 
+	 Start round ob
+	 */
+	function Round(cards) {
+		
+	}
+	Round.prototype = {
+
+	}
+
+    return {
      	createPlayer : function(name, stack) { return new Player(name, stack); },
      	createBlindStructure : function(startingStack, levels) { return new BlindStructure(startingStack, levels); },
-     	createTable : function(players) { return new Table(players); }
-     }
+     	createTable : function(players) { return new Table(players); },
+     	createPot : function(players) { return new Pot(); },
+    }
 });

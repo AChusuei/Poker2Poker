@@ -96,6 +96,9 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(sbPlayer.liveBet).toEqual(blindLevel.smallBlind);
             expect(bbPlayer.stack).toEqual(startingStack - blindLevel.bigBlind - blindLevel.ante);
             expect(bbPlayer.liveBet).toEqual(blindLevel.bigBlind);
+            expect(pot.isEligible(sbPlayer)).toBeTruthy();
+            expect(pot.isEligible(bbPlayer)).toBeTruthy();
+
             // Check rest of table for antes withdrawal
             while (this.table.nextLivePlayer().seat != this.table.button) {
                 var nonBlindPlayer = this.table.players[this.table.currentPlayer];
@@ -167,6 +170,39 @@ define(['poker', 'moment'], function(poker, moment) {
             
         });
     });
+
+    describe('A Pot', function() {
+
+        beforeEach(function() {
+            this.boy = poker.createPlayer('Alan', 3000);
+            this.girl = poker.createPlayer('Christina', 5000);
+            this.pot = poker.createPot();
+        });        
+
+        it('should make a player eligible for the pot when player adds money to the pot', function() {
+            this.pot.build(this.boy.bet(500), this.boy);
+            expect(this.pot.amount).toEqual(500);
+            expect(this.pot.isEligible(this.boy)).toBeTruthy();
+            expect(this.pot.isEligible(this.girl)).toBeFalsy();
+        });
+
+        it('should make multiple players eligible for the pot when more than one player adds money to the pot', function() {
+            this.pot.build(this.boy.bet(500), this.boy);
+            this.pot.build(this.boy.bet(1000), this.girl);
+            expect(this.pot.amount).toEqual(1500);
+            expect(this.pot.isEligible(this.boy)).toBeTruthy();
+            expect(this.pot.isEligible(this.girl)).toBeTruthy();
+        });
+
+        it('should make player eligible for the pot when multiple bets made', function() {
+            this.pot.build(this.boy.bet(500), this.boy);
+            this.pot.build(this.boy.bet(667), this.boy);
+            expect(this.pot.amount).toEqual(1167);
+            expect(this.pot.isEligible(this.boy)).toBeTruthy();
+            expect(this.pot.isEligible(this.girl)).toBeFalsy();
+        });
+
+    })
 
     describe('A BlindStructure', function() {
 
