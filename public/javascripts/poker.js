@@ -33,7 +33,10 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 				players[randomIndex].seat = this.players.length;
 				this.players.push(players[randomIndex]);
 				players.splice(randomIndex, 1);
-			}
+			};
+		},
+		getNumberOfPlayers: function() {
+			return this.players.length;
 		},
 		nextLivePlayer: function() {
 			do {
@@ -42,7 +45,8 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 				} else {
 					this.currentPlayer += 1;
 				}
-			} while (this.players[this.currentPlayer].stack == 0)
+			} while (this.players[this.currentPlayer].stack == 0 || 
+				     this.players[this.currentPlayer].action == Player.Action.FOLD);
 			return this.players[this.currentPlayer];
 		},
 		dealCardsAndSetRoundStatus: function() {
@@ -132,7 +136,7 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 			var nonFoldedPlayers = _.filter(this.players, function(player) { 
 				return player.action != Player.Action.FOLD;
 		    }, this);
-		    console.log('nonFoldedPlayers:' + nonFoldedPlayers.length);
+		    // console.log('nonFoldedPlayers:' + nonFoldedPlayers.length);
 		    var highBet = _.max(nonFoldedPlayers, function(player) {
 		    	return player.liveBet; 
 		    }).liveBet;
@@ -144,13 +148,14 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 				return (player.action == Player.Action.CALL  && player.liveBet == highBet) ||
 				       (player.action == Player.Action.ALLIN && player.liveBet <= highBet)
 		    }, this);	
-		    console.log('HB/1PL/RC/AC:' + highBet + '/' + onlyOnePlayerLeft + '/' + restChecked + '/' + restCalledTheHighBetOrAllIn);
+		    // console.log('HB/1PL/RC/AC:' + highBet + '/' + onlyOnePlayerLeft + '/' + restChecked + '/' + restCalledTheHighBetOrAllIn);
 			return onlyOnePlayerLeft || restChecked || restCalledTheHighBetOrAllIn;
 		},
 		getPlayerBetStatus: function() {
 			var button = this.button;
+			console.log('Player Status ... ');
 			_.each(this.players, function(player) {			     
-				console.log('player(seat)/bet/action:' + player.name + '(' + player.seat + (player.seat == button ? 'B' : '') + ')/' + player.liveBet + '/' + player.action);
+				console.log('player(seat)/stack/bet/action:' + player.name + '(' + player.seat + (player.seat == button ? 'B' : '') + ')/' + player.stack + '/' + player.liveBet + '/' + player.action);
 		    }, this);
 		},
 		// Given players having played one street of play, determine how to build pots.
@@ -292,66 +297,72 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 	};
 	Player.Action = {
 		YETTOACT: 'YetToAct', // Player passes at making a bet
+		POSTANTE: 'PostAnte', // Player has posted an ante.
 		POSTBLIND: 'PostBlind', // Player has posted a blind.
 		CHECK: 'Check', // Player passes at making a bet.
 		FOLD: 'Fold', // Player gives up or refuses to call the highest bet.
-		BET: 'Call', // Player makes the first bet of the round. For the purposes of resolving a street, it's a call.
+		// For the purposes of resolving a street: bet, calls and raises are all 'calls'.
+		BET: 'Call', // Player makes the first bet of the round. 
 		CALL: 'Call', // Player calls high bet, and has chips left.
-		RAISE: 'Raise', // Player makes at least a minimum raise, and has chips still left.
+		RAISE: 'Call', // Player makes at least a minimum raise, and has chips still left.
 		ALLIN: 'All-In', // Player pushes rest of their chips (regardless of bet, call, or raise)
 	};
 	Player.prototype = {
-		// Player checks
+		// Player checks. Nothing cheanges monetarily for player.
 		check: function() {
 			this.action = Player.Action.CHECK;
 		},
-		// Player checks
+		// Player folds. Nothing cheanges monetarily for player.
 		fold: function() {
 			this.action = Player.Action.FOLD;
+		},
+		// Pulls an absolute amount from a player's stack.
+		// A player is all in when they bet everything in their stack.
+		absoluteBet: function(bet, action, isNotLiveBet) {
+			if (bet >= this.stack) {
+				return this.allIn();
+			}
+			this.stack -= bet;
+			if (!isNotLiveBet) {
+				this.liveBet += bet;				
+			}
+			if (action) {
+				this.action = action;
+			}
+			return bet;
+		},
+		// Calculates the relative amount to remove from a player's stack based on a total amount to match.
+		// A player is all in when they bet everything in their stack.
+		relativeBet: function(totalBet, action) {
+			return this.absoluteBet(totalBet - this.liveBet, action);
 		},
 		// Pulls an ante for a player.
 		// For specificity, returns the ante removed from the player's stack.
 		// Also, note that antes do not count towards a player's live bet (not the same as a blind)
 		ante: function(ante) {
-			if (ante > this.stack) {
-				ante = this.stack;
-			}
-			this.stack -= ante;
-			return ante;
+			return this.absoluteBet(ante, Player.Action.POSTANTE, true);
 		},
 		// Player is posting a blind. Note this is synonymous to a bet with respect to stack.
-		// Note that this records the person as having posted a blind.
-		postBlind: function(bet) {
-			if (bet > this.stack) {
-				bet = this.stack;
-			}
-			this.stack -= bet;
-			this.liveBet += bet;
-			this.action = Player.Action.POSTBLIND;
-			return bet;
+		// If you are blinding off the rest of your chips, you are all in.
+		// Otherwise, note that this records the person as having posted a blind.
+		postBlind: function(blind) {
+			return this.absoluteBet(blind, Player.Action.POSTBLIND);
 		},
 		// Player is bettting or raising.
+		// If you are betting the rest of your chips, you are all in.
 		// For specificity, returns the amount removed from the player's stack.
 		bet: function(bet) {
-			if (bet > this.stack) {
-				bet = this.stack;
-			}
-			this.stack -= bet;
-			this.liveBet += bet;
-			this.action = Player.Action.BET;
-			return bet;
+			return this.absoluteBet(bet, Player.Action.BET);
 		},
 		// Player calls to match a current bet.
 		// Returns the amount removed from the player's stack in order to make the call.
 		call: function(totalBet) {
-			if (totalBet > this.stack) {
-				totalBet = this.stack;
-			}
-			var delta = totalBet - this.liveBet;
-			this.stack -= delta;
-			this.liveBet = totalBet;
-			this.action = Player.Action.CALL;
-			return delta;
+			return this.relativeBet(totalBet, Player.Action.CALL);
+		},
+		// Player raises to certain amount, monetarily equivalent to making a call
+		// Returns the amount removed from the player's stack in order to make the raise.
+		raise: function(totalBet) {
+			return this.relativeBet(totalBet, Player.Action.RAISE);
 		},
 		// Player bets the remainder of their chips.
 		allIn: function() {
@@ -361,9 +372,6 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 			this.action = Player.Action.ALLIN;
 			return rest;
 		},
-		awardPot: function(potAmount) {
-			this.stack += potAmount;
-		}
 	}
 	/*
      End Player object.

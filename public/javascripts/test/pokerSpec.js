@@ -17,6 +17,12 @@ define(['poker', 'moment'], function(poker, moment) {
         { name: 'Will Lee', peerId: 'nerdz' }, 
     ];
 
+    var repeatLivePlayerAction = function(action, times, context) {
+        for (s = 0; s < times; s++) { 
+            action(context);
+        }
+    }
+
     describe('A Table', function() {
 
         beforeEach(function() {
@@ -33,7 +39,7 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should have its players initialized and randomized properly', function() {
-            expect(this.table.players.length).toEqual(allPlayers.length);
+            expect(this.table.getNumberOfPlayers()).toEqual(allPlayers.length);
             // Check that player order was randomized.
             var matching = true;
             _.each(allPlayers, function(player, p) {
@@ -47,18 +53,36 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(matching).toBeFalsy();
         });
 
-        it('should choose the player after the button when nextLivePlayer() is called for the first time', function() {
+        it('should choose the player after the button when choosing the next player for the first time', function() {
             var nextPlayer = this.table.nextLivePlayer();
             expect((nextPlayer.seat == this.table.button + 1) || // button not on last player
-                (nextPlayer.seat == 0 && this.table.button == this.table.players.length - 1)).toBeTruthy();  // button on last player
+                (nextPlayer.seat == 0 && this.table.button == this.table.getNumberOfPlayers() - 1)).toBeTruthy();  // button on last player
         });
 
-        it('interacts only with players who actually have chips', function() {
+        it('should go only with players who actually have chips', function() {
             var playerGotFelted = this.table.nextLivePlayer();
             playerGotFelted.stack = 0;
             this.table.currentPlayer = this.table.button;
             var playerWithChips = this.table.nextLivePlayer();
             expect(playerWithChips).not.toEqual(playerGotFelted);
+        });
+
+        it('should skip a player that is all in when choosing the next live player', function() {
+            this.table.nextLivePlayer(); // skip first to act
+            var allInPlayer = this.table.nextLivePlayer(); // second to act is all in
+            allInPlayer.allIn();
+            this.table.currentPlayer = this.table.button; // reset ... 
+            this.table.nextLivePlayer(); // back to first to act ...
+            expect(this.table.nextLivePlayer()).not.toEqual(allInPlayer); // next to act should not be the all the player
+        });
+
+        it('should skip a player that has folded when choosing the next live player', function() {
+            this.table.nextLivePlayer(); // skip first to act
+            var foldedPlayer = this.table.nextLivePlayer(); // second to act is going to fold
+            foldedPlayer.fold();
+            this.table.currentPlayer = this.table.button; // reset ... 
+            this.table.nextLivePlayer(); // back to first to act ...
+            expect(this.table.nextLivePlayer()).not.toEqual(foldedPlayer); // next to act should not be the all the player
         });
 
         it('should deal two cards to every player when everyone has chips in their stack', function() {
@@ -85,7 +109,7 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should have an initial pot equal equal to (# of players * ante + big blind + small blind) after posting blinds and antes', function() {
             var blindLevel = this.table.blinds;
             var pot = this.table.postBlindsAndAntes();
-            expect(pot.amount).toEqual((this.table.players.length * blindLevel.ante) + blindLevel.smallBlind + blindLevel.bigBlind);
+            expect(pot.amount).toEqual((this.table.getNumberOfPlayers() * blindLevel.ante) + blindLevel.smallBlind + blindLevel.bigBlind);
         });
 
         it('should only post blinds and antes from the correct positions (after the button)', function() {
@@ -145,15 +169,15 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should move the button to the next player', function() {
             var originalButton = this.table.button;
             this.table.moveButton();
-            if (originalButton == this.table.players.length - 1) {
+            if (originalButton == this.table.getNumberOfPlayers() - 1) {
                 expect(this.table.button).toEqual(0);
             } else {
                 expect(this.table.button).toEqual(originalButton+ 1);
             }
-        });
+        });      
 
         it('should have a winner when the only one person has chips remaining in their stack', function() {
-            var winnerIndex = Math.floor((Math.random() * this.table.players.length));
+            var winnerIndex = Math.floor((Math.random() * this.table.getNumberOfPlayers()));
             _.each(this.table.players, function(player) {
                 player.stack = 0;
             });
@@ -189,7 +213,6 @@ define(['poker', 'moment'], function(poker, moment) {
             } while (this.table.currentPlayer != this.table.button);
             // small blind folds ... 
             this.table.nextLivePlayer().fold();
-            // this.table.getPlayerBetStatus();
             expect(this.table.isStreetOver()).toBeTruthy();
         });
 
@@ -200,12 +223,118 @@ define(['poker', 'moment'], function(poker, moment) {
             } while (this.table.currentPlayer != this.table.button);
             // small blind calls big blind ... 
             this.table.nextLivePlayer().call(this.table.blinds.bigBlind);
-            this.table.getPlayerBetStatus();
             expect(this.table.isStreetOver()).toBeFalsy();
         });
 
-        xit('', function() {
+        it('should not end a street when no one has acted', function() {
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
 
+        it('should not end a street when only some players have checked', function() {
+            this.table.nextLivePlayer().check();
+            this.table.nextLivePlayer().check();
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
+        it('should not end a street when only some players have folded', function() {
+            this.table.nextLivePlayer().fold();
+            this.table.nextLivePlayer().fold();
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
+        it('should not end a street when only some players have folded or checked', function() {
+            this.table.nextLivePlayer().fold();
+            this.table.nextLivePlayer().check();
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
+        it('should end a street when only all players have either folded or checked', function() {
+            do {
+                if (Math.random() > 0.5) {
+                    this.table.nextLivePlayer().fold();
+                } else {
+                    this.table.nextLivePlayer().check();
+                }
+            } while (this.table.currentPlayer != this.table.button);
+            expect(this.table.isStreetOver()).toBeTruthy();
+        });
+
+        it('should end a street when all players have folded to a donk bet', function() {
+            this.table.nextLivePlayer().bet(45);
+            do {
+                this.table.nextLivePlayer().fold();
+            } while (this.table.currentPlayer != this.table.button);
+            expect(this.table.isStreetOver()).toBeTruthy();
+        });
+
+        it('should not end a street when all players have not folded to a donk bet', function() {
+            this.table.nextLivePlayer().bet(45);
+            for (s = 0; s < this.table.getNumberOfPlayers - 2; s++) { 
+                this.table.nextLivePlayer().fold();
+            };
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
+        it('should end a street when all players have folded to a button bet', function() {
+            for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
+                this.table.nextLivePlayer().check();
+            }
+            this.table.nextLivePlayer().bet(66);
+            for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
+                this.table.nextLivePlayer().fold();
+            }
+            expect(this.table.isStreetOver()).toBeTruthy();
+        });
+
+        it('should not end a street when some players have not responded to a button bet', function() {
+            for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
+                this.table.nextLivePlayer().check();
+            }
+            this.table.nextLivePlayer().bet(66);
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { 
+                this.table.nextLivePlayer().fold();
+            }
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
+        it('should not end a street when cutoff check-raises the button bet', function() {
+            for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
+                this.table.nextLivePlayer().check();
+            }; // everyone checks to the button
+            this.table.nextLivePlayer().bet(66); // button bets in position
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { 
+                this.table.nextLivePlayer().fold();
+            }; // everyone folds except the cutoff (player b4 the button)
+            this.table.nextLivePlayer().raise(200); // cutoff 3-bets (raises)
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
+        it('should not end a street when button re-raises the cutoff bet', function() {
+            for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
+                this.table.nextLivePlayer().check();
+            }; // everyone checks to the button
+            this.table.nextLivePlayer().bet(66); // button bets in position
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { 
+                this.table.nextLivePlayer().fold();
+            }; // everyone folds except the cutoff (player b4 the button)
+            this.table.nextLivePlayer().raise(200); // cutoff 3-bets (raises)
+            this.table.nextLivePlayer().raise(400); // button 4-bets (min re-raises)
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
+        it('should end a street when re-raise is called', function() {
+            for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
+                this.table.nextLivePlayer().check();
+            }; // everyone checks to the button
+            this.table.nextLivePlayer().bet(66); // button bets in position
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { 
+                this.table.nextLivePlayer().fold();
+            }; // everyone folds except the cutoff (player b4 the button)
+            this.table.nextLivePlayer().bet(200); // cutoff 3-bets (raises)
+            this.table.nextLivePlayer().raise(400); // button 4-bets (min re-raises)
+            this.table.nextLivePlayer().call(400); // cutoff calls
+            // this.table.getPlayerBetStatus();
+            expect(this.table.isStreetOver()).toBeTruthy();
         });
 
         xit('should', function() {});
@@ -330,23 +459,48 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(this.player.ante(smallBet)).toEqual(smallBet);
         });
 
+        it('who checks without prior action should not have any money taken from his stack', function() {
+            this.player.check();
+            expect(this.player.action).toEqual(poker.PlayerAction.CHECK);
+            expect(this.player.liveBet).toEqual(0);
+            expect(this.player.stack).toEqual(startingStack);
+        });
+
+        it('who folds without prior action should not have any money taken from his stack', function() {
+            this.player.fold();
+            expect(this.player.action).toEqual(poker.PlayerAction.FOLD);
+            expect(this.player.liveBet).toEqual(0);
+            expect(this.player.stack).toEqual(startingStack);
+        });
+
+        it('who bets then folds to a raise should only have the bet removed from his stack', function() {
+            this.player.bet(smallBet);
+            this.player.fold();
+            expect(this.player.action).toEqual(poker.PlayerAction.FOLD);
+            expect(this.player.liveBet).toEqual(smallBet);
+            expect(this.player.stack).toEqual(startingStack - smallBet);
+        });
+
         it('making a bet has their stack is depleted by the amount they bet', function() {
             expect(this.player.bet(smallBet)).toEqual(smallBet);
         });
 
         it('calling a bet in front has their stack is depleted by the amount they call when no chips have been put into the pot', function() {
             expect(this.player.call(smallBet)).toEqual(smallBet);
+            expect(this.player.action).toEqual(poker.PlayerAction.CALL);
         });
 
         it('calling a raise has their stack is depleted by the difference of the chips they have in play and the amount of the raise', function() {
             var pot = this.player.bet(smallBet);
             expect(this.player.call(smallBet * 3)).toEqual(smallBet * 2);
             expect(this.player.liveBet).toEqual(smallBet * 3);
+            expect(this.player.action).toEqual(poker.PlayerAction.CALL);
         });
 
         it('has their stack is reduced to zero when they go all in', function() {
             this.player.allIn();
             expect(this.player.stack).toEqual(0);
+            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
         });
 
         it('can only ante what is in their stack', function() {
@@ -365,9 +519,9 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(this.player.allIn()).toEqual(startingStack);
         });
 
-        it('never counts an ante towards a live bet (pre-flop)', function() {
+        it('does not count an ante towards a live bet (pre-flop)', function() {
             this.player.ante(smallBet);
-            expect(this.player.liveBet).toEqual(0);
+            expect(this.player.liveBet).toEqual(0);-0
         });
 
         it('counts a bet towards a live bet', function() {
@@ -383,9 +537,37 @@ define(['poker', 'moment'], function(poker, moment) {
 
         it('going all in puts their entire stack towards the live bet', function() {
             this.player.bet(tinyBet); // tiny little bet.
-            this.player.bet(smallBet); // I four-bet someone who three bet me
+            this.player.raise(smallBet); // I four-bet someone who three bet me
             this.player.allIn(); // ah screw it, all in.
+            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
             expect(this.player.liveBet).toEqual(startingStack);
+        });
+
+        it('counts an ante equal to stack as an all in', function() {
+            this.player.ante(startingStack);
+            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+        });
+
+        it('counts posting a blind equal to stack as an all in', function() {
+            this.player.postBlind(startingStack);
+            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+        });
+
+        it('counts a bet equal to stack as an all in', function() {
+            this.player.bet(startingStack);
+            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+        });
+
+        it('counts a call equal to stack as an all in', function() {
+            this.player.bet(smallBet);
+            this.player.call(startingStack);
+            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+        });
+
+        it('counts a raise equal to stack as an all in', function() {
+            this.player.bet(smallBet);
+            this.player.raise(startingStack);
+            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
         });
 
     });
