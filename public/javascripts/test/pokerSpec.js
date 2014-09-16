@@ -333,16 +333,48 @@ define(['poker', 'moment'], function(poker, moment) {
             this.table.nextLivePlayer().bet(200); // cutoff 3-bets (raises)
             this.table.nextLivePlayer().raise(400); // button 4-bets (min re-raises)
             this.table.nextLivePlayer().call(400); // cutoff calls
-            // this.table.getPlayerBetStatus();
             expect(this.table.isStreetOver()).toBeTruthy();
         });
 
-        xit('should', function() {});
-        xit('should', function() {});
-        xit('should', function() {});
-        xit('should', function() {});
-        xit('should', function() {});
-        xit('should', function() {});
+        it('should end a street when remaining player is allIn for call amount', function() {
+            var firstPlayer = this.table.nextLivePlayer();
+            firstPlayer.stack = startingStack * 2; // ensure that starting stack bet is not allIn for first player
+            firstPlayer.bet(startingStack);
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone to the button folds
+                this.table.nextLivePlayer().fold();
+            }
+            // button moves allIn;
+            this.table.nextLivePlayer().call(startingStack); // should be an all in.
+            expect(this.table.isStreetOver()).toBeTruthy();
+        });
+
+        it('should end a street when remaining player is allIn but lower than call amount', function() {
+            var smallBet = startingStack / 10; 
+            this.table.nextLivePlayer().bet(smallBet);
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone to the button folds
+                this.table.nextLivePlayer().fold();
+            }
+            // button moves allIn but doesn't have enough to cover the call amount
+            var button = this.table.nextLivePlayer();
+            button.startingStack = smallBet - (smallBet / 2);
+            button.call(smallBet); // should be an all in.
+            expect(this.table.isStreetOver()).toBeTruthy();
+        });
+
+        it('should not end a street when remaining player is allIn raise', function() {
+            var smallBet = startingStack / 10; 
+            this.table.nextLivePlayer().bet(smallBet);
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone to the button folds
+                this.table.nextLivePlayer().fold();
+            }
+            // button moves allIn but doesn't have enough to cover the call amount
+            var button = this.table.nextLivePlayer();
+            button.startingStack = smallBet * 2;
+            button.allIn();
+            this.table.getPlayerBetStatus();
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
         xit('should', function() {});
     });
 
