@@ -27,6 +27,9 @@ define(['poker', 'moment'], function(poker, moment) {
             this.table = poker.createTable(newPlayers);
             var blindStructure = poker.createBlindStructure(startingStack, levels);
             this.table.blinds = blindStructure.getBlindLevel();
+            _.each(this.table.players, function(player) {
+                player.action = poker.PlayerAction.YETTOACT;
+            }, this);
         });
 
         it('should have its players initialized and randomized properly', function() {
@@ -59,7 +62,7 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should deal two cards to every player when everyone has chips in their stack', function() {
-            this.table.dealCards();
+            this.table.dealCardsAndSetRoundStatus();
             _.each(this.table.players, function(player) {
                 // console.info('player:' + p.name + ' | cards:' + p.hand);
                 expect(player.hand.length).toEqual(2);
@@ -69,7 +72,7 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should deal cards only to players that have chips in their stack', function() {
             this.table.players[2].stack = 0;
             this.table.players[4].stack = 0;
-            this.table.dealCards();
+            this.table.dealCardsAndSetRoundStatus();
             _.each(this.table.players, function(player, i) {
                 if (player.stack == 0) {
                     expect(player.hand.length).toEqual(0);
@@ -169,6 +172,49 @@ define(['poker', 'moment'], function(poker, moment) {
         xit('should have more tests for playing hands', function() {
             
         });
+
+        it('does not ends the pre-flop street when players still left to act', function() {
+            this.table.postBlindsAndAntes();
+            do { // get all non-blind players to fold.
+                this.table.nextLivePlayer().fold();   
+            } while (this.table.currentPlayer != this.table.button);
+            // small blind still left to Act
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
+        it('ends the pre-flop street in a walk for the big blind when everyone including the small blind folds', function() {
+            this.table.postBlindsAndAntes(); 
+            do { // get all non-blind players to fold.
+                this.table.nextLivePlayer().fold();   
+            } while (this.table.currentPlayer != this.table.button);
+            // small blind folds ... 
+            this.table.nextLivePlayer().fold();
+            // this.table.getPlayerBetStatus();
+            expect(this.table.isStreetOver()).toBeTruthy();
+        });
+
+        it('does not end the pre-flop street when everyone calls the big blind (big blind should have option to raise)', function() {
+            this.table.postBlindsAndAntes(); 
+            do { // get all non-blind players to fold.
+                this.table.nextLivePlayer().fold();   
+            } while (this.table.currentPlayer != this.table.button);
+            // small blind calls big blind ... 
+            this.table.nextLivePlayer().call(this.table.blinds.bigBlind);
+            this.table.getPlayerBetStatus();
+            expect(this.table.isStreetOver()).toBeFalsy();
+        });
+
+        xit('', function() {
+
+        });
+
+        xit('should', function() {});
+        xit('should', function() {});
+        xit('should', function() {});
+        xit('should', function() {});
+        xit('should', function() {});
+        xit('should', function() {});
+        xit('should', function() {});
     });
 
     describe('A Pot', function() {
