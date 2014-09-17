@@ -106,39 +106,55 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 			this.resolvePotWinners(pots);
 		},
 		// Play one street of poker. 
-		playStreet: function(pots) {
-			_.each(this.players, function(player) {
-				player.action = this.PlayerAction.YETTOACT;
-				player.liveBet = 0;
-			}, this);
-			do {
-				// Based on table state, build options for player.
-				var options = this.formulateActionOptions();
-				var nextLivePlayer = this.nextLivePlayer();
-				var action = this.waitForPlayerAction(nextLivePlayer, options);
-				alterPots
-			} while (this.isStreetOver());
+		// playStreet: function(pots) {
+		// 	_.each(this.players, function(player) {
+		// 		player.action = this.PlayerAction.YETTOACT;
+		// 		player.liveBet = 0;
+		// 	}, this);
+		// 	do {
+		// 		var nextLivePlayer = this.nextLivePlayer();
+		// 		var options = this.formulateActionOptions(nextLivePlayer);
+		// 		var action = this.waitForPlayerAction(nextLivePlayer, options);
+		// 		this.
+		// 	} while (this.isStreetOver());
 
+		// 	return {
+		// 		pots: [],
+		// 		endRound: true
+		// 	}
+
+		// },
+		waitForPlayerAction: function(nextLivePlayer, options) {
 			return {
-				pots: [],
-				endRound: true
+				action: this.PlayerAction.BET,
+				amount: 0,
 			}
-
 		},
-		formulateActionOptions: function() {
+		formulateActionOptions: function(player) {
+			// With no previous action, the minimum amount a player can bet.
+			var minimumBet = this.blinds.bigBlind;
+			// The current bet required by all players who wish to stay in the hand.
 			var callBet = _.chain(this.players)
 			    .filter(function(p) { return p.action != Player.Action.FOLD; } )
 				.max(function(p) { return p.liveBet; }, this)
-				.value();
-			var minimumRaise = callBet - (_.chain(this.players)
-			    .filter(function(p) { return p.action != Player.Action.FOLD && p.liveBet == callBet; } )
+				.value().liveBet;
+			// Calculates the minimum marginal additional amount needed for a raise.
+			var maxNonCallBet = _.chain(this.players) // Figures out the highest bet
+			    .filter(function(p) { return p.action != Player.Action.FOLD && p.liveBet < callBet; } )
 				.max(function(p) { return p.liveBet; }, this)
-				.value());
-			var actions = [this.PlayerAction.FOLD, this.PlayerAction.ALLIN];
+				.value().liveBet;
+			var minimumRaiseDelta = (callBet == 0 ? minimumBet : callBet - maxNonCallBet);
+			// console.log('CB/MRD:' + callBet + '/' + minimumRaiseDelta);
+			// The absolute value of the minimum raise.
+			var minimumRaise = callBet + minimumRaiseDelta;
+			var actions = [Player.Action.FOLD, Player.Action.ALLIN];
 			if (callBet == 0) {
-				actions.push(this.PlayerAction.CHECK, this.PlayerAction.BET);
-			} else {
-				actions.push(this.PlayerAction.CALL, this.PlayerAction.RAISE);
+				actions.push(Player.Action.CHECK, Player.Action.BET);
+			} else if ((player.stack + player.liveBet) > callBet) {
+				actions.push(Player.Action.CALL);
+				if (player.stack + player.liveBet > minimumRaise) {
+					actions.push(Player.Action.RAISE);
+				};
 			};
 			return { 
 				minimumBet: this.blinds.bigBlind,
@@ -384,6 +400,6 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
      	createBlindStructure : function(startingStack, levels) { return new BlindStructure(startingStack, levels); },
      	createTable : function(players) { return new Table(players); },
      	createPot : function(players) { return new Pot(); },
-     	PlayerAction: Player.Action,
+     	Player: { Action : Player.Action } ,
     }
 });

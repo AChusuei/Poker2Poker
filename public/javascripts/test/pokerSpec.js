@@ -26,6 +26,7 @@ define(['poker', 'moment'], function(poker, moment) {
     describe('A Table', function() {
 
         beforeEach(function() {
+            this.poker = poker;
             var newPlayers = [];
             _.each(allPlayers, function(p) {
                 newPlayers.push(poker.createPlayer(p.name, startingStack));
@@ -34,7 +35,7 @@ define(['poker', 'moment'], function(poker, moment) {
             var blindStructure = poker.createBlindStructure(startingStack, levels);
             this.table.blinds = blindStructure.getBlindLevel();
             _.each(this.table.players, function(player) {
-                player.action = poker.PlayerAction.YETTOACT;
+                player.action = poker.Player.Action.YETTOACT;
             }, this);
         });
 
@@ -371,12 +372,45 @@ define(['poker', 'moment'], function(poker, moment) {
             var button = this.table.nextLivePlayer();
             button.startingStack = smallBet * 2;
             button.allIn();
-            // this.table.getPlayerBetStatus();
             expect(this.table.isStreetOver()).toBeFalsy();
         });
 
-        it('should formulate ', function() {
+        it('should formulate base action options when no one has acted yet and small blind has ten big blinds in stack', function() {
+            var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
+            expect(options.minimumBet).toEqual(this.table.blinds.bigBlind);
+            expect(options.callBet).toEqual(0);
+            expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind);
+            _.each(options.action, function(action) {
+                var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
+                expect(expectedActions.contains(action)).toBeTruthy();
+            }, this);
+        });
 
+        it('should formulate base action options when everyone but the button has checked and button has ten big blinds in stack', function() {
+            for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
+                this.table.nextLivePlayer().check();
+            }; // everyone checks to the button
+            // this.table.getPlayerBetStatus();
+            var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
+            expect(options.minimumBet).toEqual(this.table.blinds.bigBlind);
+            expect(options.callBet).toEqual(0);
+            expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind);
+            _.each(options.action, function(action) {
+                var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
+                expect(expectedActions.contains(action)).toBeTruthy();
+            }, this);
+        });
+
+        it('should formulate call action options when small blind opens with a minimum bet (amount of big blind)', function() {
+            this.table.nextLivePlayer().bet(this.table.blinds.bigBlind); // small blind opens
+            var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
+            expect(options.minimumBet).toEqual(this.table.blinds.bigBlind);
+            expect(options.callBet).toEqual(this.table.blinds.bigBlind);
+            expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind * 2);
+            _.each(options.action, function(action) {
+                var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CALL, poker.Player.Action.RAISE];
+                expect(expectedActions.contains(action)).toBeTruthy();
+            }, this);
         });
     });
 
@@ -495,14 +529,14 @@ define(['poker', 'moment'], function(poker, moment) {
 
         it('who checks without prior action should not have any money taken from his stack', function() {
             this.player.check();
-            expect(this.player.action).toEqual(poker.PlayerAction.CHECK);
+            expect(this.player.action).toEqual(poker.Player.Action.CHECK);
             expect(this.player.liveBet).toEqual(0);
             expect(this.player.stack).toEqual(startingStack);
         });
 
         it('who folds without prior action should not have any money taken from his stack', function() {
             this.player.fold();
-            expect(this.player.action).toEqual(poker.PlayerAction.FOLD);
+            expect(this.player.action).toEqual(poker.Player.Action.FOLD);
             expect(this.player.liveBet).toEqual(0);
             expect(this.player.stack).toEqual(startingStack);
         });
@@ -510,7 +544,7 @@ define(['poker', 'moment'], function(poker, moment) {
         it('who bets then folds to a raise should only have the bet removed from his stack', function() {
             this.player.bet(smallBet);
             this.player.fold();
-            expect(this.player.action).toEqual(poker.PlayerAction.FOLD);
+            expect(this.player.action).toEqual(poker.Player.Action.FOLD);
             expect(this.player.liveBet).toEqual(smallBet);
             expect(this.player.stack).toEqual(startingStack - smallBet);
         });
@@ -521,20 +555,20 @@ define(['poker', 'moment'], function(poker, moment) {
 
         it('calling a bet in front has their stack is depleted by the amount they call when no chips have been put into the pot', function() {
             expect(this.player.call(smallBet)).toEqual(smallBet);
-            expect(this.player.action).toEqual(poker.PlayerAction.CALL);
+            expect(this.player.action).toEqual(poker.Player.Action.CALL);
         });
 
         it('calling a raise has their stack is depleted by the difference of the chips they have in play and the amount of the raise', function() {
             var pot = this.player.bet(smallBet);
             expect(this.player.call(smallBet * 3)).toEqual(smallBet * 2);
             expect(this.player.liveBet).toEqual(smallBet * 3);
-            expect(this.player.action).toEqual(poker.PlayerAction.CALL);
+            expect(this.player.action).toEqual(poker.Player.Action.CALL);
         });
 
         it('has their stack is reduced to zero when they go all in', function() {
             this.player.allIn();
             expect(this.player.stack).toEqual(0);
-            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+            expect(this.player.action).toEqual(poker.Player.Action.ALLIN);
         });
 
         it('can only ante what is in their stack', function() {
@@ -573,35 +607,35 @@ define(['poker', 'moment'], function(poker, moment) {
             this.player.bet(tinyBet); // tiny little bet.
             this.player.raise(smallBet); // I four-bet someone who three bet me
             this.player.allIn(); // ah screw it, all in.
-            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+            expect(this.player.action).toEqual(poker.Player.Action.ALLIN);
             expect(this.player.liveBet).toEqual(startingStack);
         });
 
         it('counts an ante equal to stack as an all in', function() {
             this.player.ante(startingStack);
-            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+            expect(this.player.action).toEqual(poker.Player.Action.ALLIN);
         });
 
         it('counts posting a blind equal to stack as an all in', function() {
             this.player.postBlind(startingStack);
-            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+            expect(this.player.action).toEqual(poker.Player.Action.ALLIN);
         });
 
         it('counts a bet equal to stack as an all in', function() {
             this.player.bet(startingStack);
-            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+            expect(this.player.action).toEqual(poker.Player.Action.ALLIN);
         });
 
         it('counts a call equal to stack as an all in', function() {
             this.player.bet(smallBet);
             this.player.call(startingStack);
-            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+            expect(this.player.action).toEqual(poker.Player.Action.ALLIN);
         });
 
         it('counts a raise equal to stack as an all in', function() {
             this.player.bet(smallBet);
             this.player.raise(startingStack);
-            expect(this.player.action).toEqual(poker.PlayerAction.ALLIN);
+            expect(this.player.action).toEqual(poker.Player.Action.ALLIN);
         });
 
     });
