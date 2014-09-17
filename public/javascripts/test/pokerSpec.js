@@ -367,15 +367,17 @@ define(['poker', 'moment'], function(poker, moment) {
             for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone to the button folds
                 this.table.nextLivePlayer().fold();
             }
-            // button moves allIn but doesn't have enough to cover the call amount
+            // button moves allIn with a raise over the caller, so betting is re-opened.
             var button = this.table.nextLivePlayer();
             button.startingStack = smallBet * 2;
             button.allIn();
-            this.table.getPlayerBetStatus();
+            // this.table.getPlayerBetStatus();
             expect(this.table.isStreetOver()).toBeFalsy();
         });
 
-        xit('should', function() {});
+        it('should formulate ', function() {
+
+        });
     });
 
     describe('A Pot', function() {

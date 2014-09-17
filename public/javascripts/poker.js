@@ -103,35 +103,50 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 				var streetResult = this.playStreet(pots);
 				street++;
 			} while (!streetResult.endRound || street == this.Street.SHOWDOWN)		 
-			this.getRoundWinner().stack += table.pot.amount;
+			this.resolvePotWinners(pots);
 		},
-		/* 
-		 Play one street of poker. 
-		 Street ends only when all non-folded players:
-		 1) Check OR  
-		 2) Call/Bet matching high bet for the street, and has chips remaining OR
-		 3) are AllIn 
-		 */
-		// playStreet: function(pots) {
-			
-		// 	_.each(this.players, function(player) {
-		// 		player.action = this.PlayerAction.YETTOACT;
-		// 	}, this);
-		// 	var highBet = 0;
-		// 	var actionOptions = this.formulateActionOptions(actionOptions, lastPlayerAction);
-		// 	var nextLivePlayer = this.nextLivePlayer();
-		// 	var response = this.waitForPlayerAction(nextLivePlayer, options);
-		// 	do {
+		// Play one street of poker. 
+		playStreet: function(pots) {
+			_.each(this.players, function(player) {
+				player.action = this.PlayerAction.YETTOACT;
+				player.liveBet = 0;
+			}, this);
+			do {
+				// Based on table state, build options for player.
+				var options = this.formulateActionOptions();
+				var nextLivePlayer = this.nextLivePlayer();
+				var action = this.waitForPlayerAction(nextLivePlayer, options);
+				alterPots
+			} while (this.isStreetOver());
 
-		// 	} while (true
+			return {
+				pots: [],
+				endRound: true
+			}
 
-		// 	);
-		// 	return {
-		// 		pots: [],
-		// 		endRound: true
-		// 	}
-
-		// },
+		},
+		formulateActionOptions: function() {
+			var callBet = _.chain(this.players)
+			    .filter(function(p) { return p.action != Player.Action.FOLD; } )
+				.max(function(p) { return p.liveBet; }, this)
+				.value();
+			var minimumRaise = callBet - (_.chain(this.players)
+			    .filter(function(p) { return p.action != Player.Action.FOLD && p.liveBet == callBet; } )
+				.max(function(p) { return p.liveBet; }, this)
+				.value());
+			var actions = [this.PlayerAction.FOLD, this.PlayerAction.ALLIN];
+			if (callBet == 0) {
+				actions.push(this.PlayerAction.CHECK, this.PlayerAction.BET);
+			} else {
+				actions.push(this.PlayerAction.CALL, this.PlayerAction.RAISE);
+			};
+			return { 
+				minimumBet: this.blinds.bigBlind,
+				callBet: callBet,
+				minimumRaise: minimumRaise,
+				actions: actions,
+			};
+		},
 		isStreetOver: function() {
 			var nonFoldedPlayers = _.filter(this.players, function(player) { 
 				return player.action != Player.Action.FOLD;
@@ -144,10 +159,15 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 			var restChecked = _.every(nonFoldedPlayers, function(player) { 
 				return player.action == Player.Action.CHECK; 
 		    }, this);
+		    var madeWager = function(player) {
+		    	return player.action == Player.Action.BET || 
+		    		   player.action == Player.Action.CALL ||
+		    	       player.action == Player.Action.RAISE;
+		    }
 			var restCalledTheHighBetOrAllIn = _.every(nonFoldedPlayers, function(player) { 
-				return (player.action == Player.Action.CALL  && player.liveBet == highBet) ||
+				return (madeWager(player) && player.liveBet == highBet) ||
 				       (player.action == Player.Action.ALLIN && player.liveBet <= highBet)
-		    }, this);	
+		    }, this);
 		    // console.log('HB/1PL/RC/AC:' + highBet + '/' + onlyOnePlayerLeft + '/' + restChecked + '/' + restCalledTheHighBetOrAllIn);
 			return onlyOnePlayerLeft || restChecked || restCalledTheHighBetOrAllIn;
 		},
@@ -158,34 +178,20 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 				console.log('player(seat)/stack/bet/action:' + player.name + '(' + player.seat + (player.seat == button ? 'B' : '') + ')/' + player.stack + '/' + player.liveBet + '/' + player.action);
 		    }, this);
 		},
-		// Given players having played one street of play, determine how to build pots.
+		// Given a closed street of betting, evaluate pots for remaining players.
 		resolvePots: function(pots, players) {
-
+			var nonFoldedAllInPlayers = _.filter(this.players, function(player) { 
+				return player.action != Player.Action.FOLD;
+		    }, this);
+		    if (nonFoldedAllInPlayers.length > 0) {
+		    	// create pot for allin players
+		    }
+		    // find minimum bet and pull players with surplus 
+		    var highBet = _.max(nonFoldedPlayers, function(player) {
+		    	return player.liveBet; 
+		    }).liveBet;
 		},
-		formulateActionOptions: function(actionOptions, lastPlayerAction) {
-			if (!actionOptions || !lastPlayerAction) {
-				return { 
-					minimumBet: this.blinds.bigBlind,
-					call: this.betToCall,
-					minimumRaise: this.blinds.bigBlind,
-				};
-			} else {
-				switch (lastPlayerAction.action) {
-					case this.PlayerAction.BET:
-						actionOptions.betToCall = lastPlayerAction.amount;
-						break;
-					case this.PlayerAction.CALL:
-						// nothing changes for the 
-						break;
-					case this.PlayerAction.RAISE: 
-						break;
-					case this.PlayerAction.ALLIN:
-					    // pot craziness occurs here ....  
-						break;
-				}
-			}
-			return actionOptions;
-		},
+		
 		Street: {
 			PREFLOP: 0,
 			FLOP: 1,
@@ -264,7 +270,6 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
     	}
     }
 
-
 	/*
      BlindStructure: holds blind levels of the game.
      */
@@ -283,9 +288,6 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 			return this.levels[this.currentLevel];
 		},
 	} 
-	/*
-     End BlindStructure object.
-     */ 
 
 	/*
      Start Player object. Mostly information around remaining stack and betting methods.
@@ -302,9 +304,9 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 		CHECK: 'Check', // Player passes at making a bet.
 		FOLD: 'Fold', // Player gives up or refuses to call the highest bet.
 		// For the purposes of resolving a street: bet, calls and raises are all 'calls'.
-		BET: 'Call', // Player makes the first bet of the round. 
+		BET: 'Bet', // Player makes the first bet of the round. 
 		CALL: 'Call', // Player calls high bet, and has chips left.
-		RAISE: 'Call', // Player makes at least a minimum raise, and has chips still left.
+		RAISE: 'Raise', // Player makes at least a minimum raise, and has chips still left.
 		ALLIN: 'All-In', // Player pushes rest of their chips (regardless of bet, call, or raise)
 	};
 	Player.prototype = {
