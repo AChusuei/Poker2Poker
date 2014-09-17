@@ -146,7 +146,7 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 			var minimumRaiseDelta = (callBet == 0 ? minimumBet : callBet - maxNonCallBet);
 			// console.log('CB/MRD:' + callBet + '/' + minimumRaiseDelta);
 			// The absolute value of the minimum raise.
-			var minimumRaise = callBet + minimumRaiseDelta;
+			var minimumRaise = Math.min(callBet + minimumRaiseDelta, player.liveBet + player.stack);
 			var actions = [Player.Action.FOLD, Player.Action.ALLIN];
 			if (callBet == 0) {
 				actions.push(Player.Action.CHECK, Player.Action.BET);
@@ -157,7 +157,6 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 				};
 			};
 			return { 
-				minimumBet: this.blinds.bigBlind,
 				callBet: callBet,
 				minimumRaise: minimumRaise,
 				actions: actions,

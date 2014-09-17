@@ -375,42 +375,123 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(this.table.isStreetOver()).toBeFalsy();
         });
 
+        function expectContainsAll(expected, actual) {
+            expect(actual.length).toEqual(expected.length);
+            _.each(actual.actions, function(item) {                
+                expect(_.contains(expected, item)).toBeTruthy();
+            });
+        }
+
         it('should formulate base action options when no one has acted yet and small blind has ten big blinds in stack', function() {
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
-            expect(options.minimumBet).toEqual(this.table.blinds.bigBlind);
             expect(options.callBet).toEqual(0);
             expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind);
-            _.each(options.action, function(action) {
-                var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
-                expect(expectedActions.contains(action)).toBeTruthy();
-            }, this);
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
+            expectContainsAll(expectedActions, options.actions);
         });
 
         it('should formulate base action options when everyone but the button has checked and button has ten big blinds in stack', function() {
             for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
                 this.table.nextLivePlayer().check();
             }; // everyone checks to the button
-            // this.table.getPlayerBetStatus();
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
-            expect(options.minimumBet).toEqual(this.table.blinds.bigBlind);
             expect(options.callBet).toEqual(0);
             expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind);
-            _.each(options.action, function(action) {
-                var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
-                expect(expectedActions.contains(action)).toBeTruthy();
-            }, this);
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
+            expectContainsAll(expectedActions, options.actions);
         });
 
-        it('should formulate call action options when small blind opens with a minimum bet (amount of big blind)', function() {
+        it('should formulate action options where calling and min raise are equal to allIn if button call is an all-in', function() {
+            var buttonAllIn = startingStack - 300;
+            this.table.nextLivePlayer().bet(buttonAllIn);
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { 
+                this.table.nextLivePlayer().check();
+            };
+            var button = this.table.nextLivePlayer();
+            button.stack = buttonAllIn; // fix the stack to force all in situation
+            var options = this.table.formulateActionOptions(button);
+            expect(options.callBet).toEqual(buttonAllIn);
+            expect(options.minimumRaise).toEqual(buttonAllIn);
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN];
+            expectContainsAll(expectedActions, options.actions);
+        });
+
+        it('should formulate action options for all-in when button has already committed chips to the pot', function() {
+            var buttonAllIn = startingStack - 300;
+            for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
+                this.table.nextLivePlayer().check();
+            }; // check to button
+            var button = this.table.nextLivePlayer();
+            button.stack = buttonAllIn; // fix the stack to force all in situation
+            button.bet(buttonAllIn / 3); 
+            this.table.nextLivePlayer().raise(buttonAllIn);
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { 
+                this.table.nextLivePlayer().fold();
+            }; // check to button
+            // this.table.getPlayerBetStatus();
+            var options = this.table.formulateActionOptions(button);
+            expect(options.callBet).toEqual(buttonAllIn);
+            expect(options.minimumRaise).toEqual(buttonAllIn);
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN];
+            expectContainsAll(expectedActions, options.actions);
+        });
+
+        it('should formulate action options for a call that would not be not all in, but a raise would be all in', function() {
+            var buttonAllIn = startingStack - 100;
+            this.table.nextLivePlayer().bet(buttonAllIn / 2);
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { 
+                this.table.nextLivePlayer().fold();
+            };
+            var button = this.table.nextLivePlayer();
+            button.stack = buttonAllIn; // fix the stack to force all in situation
+            var options = this.table.formulateActionOptions(button);
+            expect(options.callBet).toEqual(buttonAllIn / 2);
+            expect(options.minimumRaise).toEqual(buttonAllIn);
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.CALL, poker.Player.Action.ALLIN];
+            expectContainsAll(expectedActions, options.actions);
+        });
+
+        it('should formulate correct action options when small blind opens with a minimum bet (amount of big blind)', function() {
             this.table.nextLivePlayer().bet(this.table.blinds.bigBlind); // small blind opens
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
-            expect(options.minimumBet).toEqual(this.table.blinds.bigBlind);
             expect(options.callBet).toEqual(this.table.blinds.bigBlind);
             expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind * 2);
-            _.each(options.action, function(action) {
-                var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CALL, poker.Player.Action.RAISE];
-                expect(expectedActions.contains(action)).toBeTruthy();
-            }, this);
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CALL, poker.Player.Action.RAISE];
+            expectContainsAll(expectedActions, options.actions);
+        });
+
+        it('should formulate correct action options for big blind when small blind opens with a larger than minimum bet', function() {
+            var largerThanMinBet = this.table.blinds.bigBlind * 2;
+            this.table.nextLivePlayer().bet(largerThanMinBet);
+            var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
+            expect(options.callBet).toEqual(largerThanMinBet);
+            expect(options.minimumRaise).toEqual(largerThanMinBet * 2);
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CALL, poker.Player.Action.RAISE];
+            expectContainsAll(expectedActions, options.actions);
+        });
+
+        it('should formulate correct action options for UTG when small blind is raised by big blind', function() {
+            var bet = this.table.blinds.bigBlind * 2;
+            var raise = this.table.blinds.bigBlind * 4;
+            this.table.nextLivePlayer().bet(bet);
+            this.table.nextLivePlayer().raise(raise);
+            var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
+            expect(options.callBet).toEqual(raise);
+            expect(options.minimumRaise).toEqual(raise + (raise - bet));
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CALL, poker.Player.Action.RAISE];
+            expectContainsAll(expectedActions, options.actions);
+        });
+
+        it('should formulate correct action options for UTG when small blind is raised by big blind', function() {
+            var bet = this.table.blinds.bigBlind * 2;
+            var raise = this.table.blinds.bigBlind * 4;
+            this.table.nextLivePlayer().bet(bet);
+            this.table.nextLivePlayer().raise(raise);
+            var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
+            expect(options.callBet).toEqual(raise);
+            expect(options.minimumRaise).toEqual(raise + (raise - bet));
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CALL, poker.Player.Action.RAISE];
+            expectContainsAll(expectedActions, options.actions);
         });
     });
 
