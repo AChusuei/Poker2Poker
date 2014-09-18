@@ -1,6 +1,6 @@
 requirejs.config({
     //By default load any module IDs from js/lib
-    baseUrl: '/assets/javascripts',
+    baseUrl: 'javascripts',
     //except, if the module ID starts with "app",
     //load it from the js/app directory. paths
     //config is relative to the baseUrl, and
@@ -13,10 +13,10 @@ requirejs.config({
         "cards" : { "deps" : ['jquery','jCanvas'] },
     },
     paths: {
-    	jquery: '//code.jquery.com/jquery-1.11.0.min',
-        bootstrap: '//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min',
-        peer: '//cdn.peerjs.com/0.3/peer.min',
-        react: '//fb.me/react-0.11.1',
+    	jquery: 'http://code.jquery.com/jquery-1.11.0.min',
+        bootstrap: 'http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min',
+        peer: 'http://cdn.peerjs.com/0.3/peer.min',
+        react: 'http://fb.me/react-0.11.1',
         jCanvas: 'jCanvas',
         cards: 'jCanvasCards'
     },
@@ -28,8 +28,26 @@ requirejs.config({
 });
 
 // Start the main app logic.
-requirejs(['jquery', 'react', 'peer', 'cards', 'bootstrap', 'playingCards', 'playingCards.ui', 'cardActions', 'workerCheck', 'underscore'],
-function($, react, peer, cards, bootstrap, playingCards, playingCardsUI, cardActions, peerActions) {
-    // var p = peerActions.startPeer();
+requirejs(['jquery', 'react', 'bootstrap', 'poker', 'peerActions'],
+function($, react, bootstrap, poker, peerActions) {
+    $(document).ready(function() {
+        $('#startGame').click(function() {
+            peerActions.startPeer();
+            console.log('STARTING GAME!');
+        });
+        $('#connectToPeer').click(function() {
+            var remotePeerId = $('#remotePeerId').text;
+            peerActions.connectToPeer(remotePeerId);
+            console.log('connecting to peer id ' + remotePeerId);
+        });
+        $('#endGame').click(function() {
+            peerActions.stopPeer();
+            console.log('ENDING GAME!');
+        });
+
+        console.log('game is ready to go!');
+    });
+
+    
     // setTimeout(function() { p.destroy(); }, 5000);
 });

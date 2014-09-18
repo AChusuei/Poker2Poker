@@ -106,29 +106,33 @@ define(['moment', 'underscore', 'playingCards'], function(moment) {
 			this.resolvePotWinners(pots);
 		},
 		// Play one street of poker. 
-		// playStreet: function(pots) {
-		// 	_.each(this.players, function(player) {
-		// 		player.action = this.PlayerAction.YETTOACT;
-		// 		player.liveBet = 0;
-		// 	}, this);
-		// 	do {
-		// 		var nextLivePlayer = this.nextLivePlayer();
-		// 		var options = this.formulateActionOptions(nextLivePlayer);
-		// 		var action = this.waitForPlayerAction(nextLivePlayer, options);
-		// 		this.
-		// 	} while (this.isStreetOver());
+		playStreet: function(pots) {
+			_.each(this.players, function(player) {
+				player.action = this.PlayerAction.YETTOACT;
+				player.liveBet = 0;
+			}, this);
+			do {
+				var nextLivePlayer = this.nextLivePlayer();
+				var options = this.formulateActionOptions(nextLivePlayer);
+				this.waitForPlayerAction(nextLivePlayer, options);
+				this.syncTableWithListeners();
+			} while (this.isStreetOver());
 
-		// 	return {
-		// 		pots: [],
-		// 		endRound: true
-		// 	}
+			return {
+				pots: [],
+				endRound: true
+			}
 
-		// },
+		},
 		waitForPlayerAction: function(nextLivePlayer, options) {
+			// send signal to player to update game. 
+			// player responds with action like below:
 			return {
 				action: this.PlayerAction.BET,
 				amount: 0,
 			}
+			// alter table according to player action
+			
 		},
 		formulateActionOptions: function(player) {
 			// With no previous action, the minimum amount a player can bet.
