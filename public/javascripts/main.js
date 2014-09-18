@@ -36,7 +36,7 @@ function($, react, bootstrap, poker, peerActions) {
             console.log('STARTING GAME!');
         });
         $('#connectToPeer').click(function() {
-            var remotePeerId = $('#remotePeerId').text;
+            var remotePeerId = $('#remotePeerId').val();
             peerActions.connectToPeer(remotePeerId);
             console.log('connecting to peer id ' + remotePeerId);
         });

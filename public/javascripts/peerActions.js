@@ -9,8 +9,8 @@ define(['peer'], function() {
 		  $('#peerId').text(id);
 		});
 		peer.on('connection', function(conn) {
-	      console.log('My conn info is: ' + conn.metadata);
-	      $('#connInfo').text(conn.metadata);
+	      console.log('Connected to peer  ' + conn.peer);
+	      $('#connectedRemotePeerId').text(conn.peer);
 		});
 		peer.on('close', function() {
           console.log('peer ' + this.id + ' was closed.');
@@ -18,12 +18,17 @@ define(['peer'], function() {
 		});
 	};
 
+	var connectToPeer = function(peerId) {
+		peer.connect(peerId);
+	}
+
 	var stopPeer = function() {
 		peer.destroy();
 	}
 
     return {
         startPeer: startPeer,
+        connectToPeer: connectToPeer,
         stopPeer: stopPeer,
     };
 
