@@ -37,18 +37,17 @@ function($, react, bootstrap, poker, peerActions) {
         });
         $('#connectToPeer').click(function() {
             var remotePeerId = $('#remotePeerId').val();
-            var conn = peerActions.connectToPeer(remotePeerId);
-            $('#connectedRemotePeerId').text(conn.peer);
-            console.log('connected to peer id ' + conn.peer);
+            peerActions.connectToPeer(remotePeerId);
         });
         $('#endGame').click(function() {
             peerActions.stopPeer();
             console.log('ENDING GAME!');
         });
-
+        $('#sendMessage').click(function() {
+            var msg = $('#messageToSend').val();
+            peerActions.sendMessage(msg);
+        });
+        
         console.log('game is ready to go!');
     });
-
-    
-    // setTimeout(function() { p.destroy(); }, 5000);
 });

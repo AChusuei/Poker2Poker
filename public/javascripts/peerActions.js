@@ -1,35 +1,60 @@
 define(['peer'], function() {
 
-	var peer;
+	var session;
+
+	var connection;
 
     var startPeer = function() {
-        peer = new Peer({key: '78u36fbxn6f7p66r'});
-		peer.on('open', function(id) {
+        session = new Peer({key: '78u36fbxn6f7p66r'});
+		session.on('open', function(id) {
 		  console.log('My peer ID is: ' + id);
 		  $('#peerId').text(id);
 		});
-		peer.on('connection', function(conn) {
-	      console.log('Connected to peer  ' + conn.peer);
+		session.on('connection', function(conn) {
+	      console.log('Remote peer ' + conn.peer + ' asked for connection');
 	      $('#connectedRemotePeerId').text(conn.peer);
+	      connection = conn;
+	      initializeConnection(connection);
 		});
-		peer.on('close', function() {
+		session.on('close', function() {
           console.log('peer ' + this.id + ' was closed.');
           $('#peerId').text('disconnected');
 		});
 	};
 
 	var connectToPeer = function(peerId) {
-		return peer.connect(peerId);
+		connection = session.connect(peerId);
+		initializeConnection(connection);
+
+		// alert console that we've connected to remote peer.
+        console.log('We connected to peer ' + connection.peer);
+        $('#connectedRemotePeerId').text(connection.peer);
+	}
+
+	var initializeConnection = function(c) {
+		c.on('open', function() { 
+		  // Receive messages
+		  c.on('data', function(data) {
+		  	// var json = JSON.parse(data);
+		    console.log('Received', data);
+		    $('#receivedMessage').text(data);
+		  });
+		});
+	}
+
+	var sendMessage = function(data) {
+		connection.send(data);
 	}
 
 	var stopPeer = function() {
-		peer.destroy();
+		session.destroy();
 	}
 
     return {
         startPeer: startPeer,
         connectToPeer: connectToPeer,
         stopPeer: stopPeer,
+        sendMessage: sendMessage,
     };
 
 });
