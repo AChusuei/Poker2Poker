@@ -37,8 +37,9 @@ function($, react, bootstrap, poker, peerActions) {
         });
         $('#connectToPeer').click(function() {
             var remotePeerId = $('#remotePeerId').val();
-            peerActions.connectToPeer(remotePeerId);
-            console.log('connecting to peer id ' + remotePeerId);
+            var conn = peerActions.connectToPeer(remotePeerId);
+            $('#connectedRemotePeerId').text(conn.peer);
+            console.log('connected to peer id ' + conn.peer);
         });
         $('#endGame').click(function() {
             peerActions.stopPeer();

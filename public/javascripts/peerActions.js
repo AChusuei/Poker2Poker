@@ -19,7 +19,7 @@ define(['peer'], function() {
 	};
 
 	var connectToPeer = function(peerId) {
-		peer.connect(peerId);
+		return peer.connect(peerId);
 	}
 
 	var stopPeer = function() {
