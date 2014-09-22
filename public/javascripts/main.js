@@ -28,26 +28,7 @@ requirejs.config({
 });
 
 // Start the main app logic.
-requirejs(['jquery', 'react', 'bootstrap', 'poker', 'peerActions'],
-function($, react, bootstrap, poker, peerActions) {
-    $(document).ready(function() {
-        $('#startGame').click(function() {
-            peerActions.startPeer();
-            console.log('STARTING GAME!');
-        });
-        $('#connectToPeer').click(function() {
-            var remotePeerId = $('#remotePeerId').val();
-            peerActions.connectToPeer(remotePeerId);
-        });
-        $('#endGame').click(function() {
-            peerActions.stopPeer();
-            console.log('ENDING GAME!');
-        });
-        $('#sendMessage').click(function() {
-            var msg = $('#messageToSend').val();
-            peerActions.sendMessage(msg);
-        });
-        
-        console.log('game is ready to go!');
-    });
+requirejs(['jquery', 'react', 'bootstrap', 'poker', 'peerActions', 'gameUI'],
+function($, react, bootstrap, poker, peerActions, gameUI) {
+    peerActions.startSession(gameUI);
 });

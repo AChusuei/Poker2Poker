@@ -1,60 +1,97 @@
-define(['peer'], function() {
+define(['peer'], function(peer) {
 
-	var session;
+	function PeerSession(gameUI) {
+		this.session = null;
+		this.connections = {};
+		this.resolvePlayerAction = null;
+		this.gameUI = gameUI;
+	};
+	PeerSession.prototype = {
+		startSession: function() {
+	        this.session = new Peer({key: '78u36fbxn6f7p66r'});
+			this.session.on('open', function(id) {
+  				console.log('My peer ID is: ' + id);
+				peerSession.gameUI.signal('open', {id: id});
+			});
+			this.session.on('connection', function(newConnection) {
+				// when remote wants to connect to us...
+		    	console.log('Remote peer ' + newConnection.peer + ' asked for connection');
+		    	this.initializeConnection(newConnection);
+		    	peerSession.gameUI.signal('connection', { peerId : newConnection.peer }); // todo: signal more than one connection 
+			});
+			this.session.on('close', function() {
+	        	console.log('peer ' + this.id + ' was closed.');
+	        	peerSession.gameUI.signal('close', { peerId : newConnection.peer });
+			});
+		},
+		connectToPeer: function(peerId) {
+			// when we want to connect to peer ... 
+			var newConnection = this.session.connect(peerId);
+			this.initializeConnection(newConnection);
 
-	var connection;
-
-    var startPeer = function() {
-        session = new Peer({key: '78u36fbxn6f7p66r'});
-		session.on('open', function(id) {
-		  console.log('My peer ID is: ' + id);
-		  $('#peerId').text(id);
-		});
-		session.on('connection', function(conn) {
-	      console.log('Remote peer ' + conn.peer + ' asked for connection');
-	      $('#connectedRemotePeerId').text(conn.peer);
-	      connection = conn;
-	      initializeConnection(connection);
-		});
-		session.on('close', function() {
-          console.log('peer ' + this.id + ' was closed.');
-          $('#peerId').text('disconnected');
-		});
+			// alert console that we've connected to remote peer.
+	        console.log('We connected to peer ' + newConnection.peer);
+	        peerSession.gameUI.signal('connection', { peerId : newConnection.peer }); // todo: signal more than one connection 
+		},
+		initializeConnection: function(c) {
+			c.on('open', function() { 
+				// Receive messages
+				c.on('data', function(data) {
+					console.log('Received some data from ' + c.peer + ': ' + data);
+			  		this.interpretData(data);
+			    	// $('#receivedMessage').text(data);
+			    });
+			});
+			this.connections[c.peer] = c;
+		},
+		interpretData: function(data) {
+			var message = JSON.parse(data);
+			switch (message.type) {
+				case PeerMessageType.RequestPlayerAction:
+					peerSession.gameUI.promptPlayerAction(message);
+					break;
+				case PeerMessageType.ResponseFromPlayer: 
+					peerSession.gameUI.conveyPlayerAction(message); // show in UI
+					resolvePlayerAction(message);
+					break;
+			}
+		},
+		sendMessage: function(peerId, data) {
+			connection[peerId].send(data);
+		},
+		promptPlayerAction: function(options, callBack) {
+			this.resolvePlayerAction = callBack;
+			this.sendMessage(options);
+		},
+		conveyPlayerAction: function(action, amount) {
+			sendMessage({ 
+				type: PeerMessageType.ResponseFromPlayer, 
+				action : action, 
+				amount: amount 
+			});
+		},
+		stopSession: function() {
+			this.session.destroy();
+		},
 	};
 
-	var connectToPeer = function(peerId) {
-		connection = session.connect(peerId);
-		initializeConnection(connection);
+	var PeerMessageType = {
+		RequestPlayerAction: 'requestPlayerAction',
+		ResponseFromPlayer: 'responseFromPlayer',
+	};
 
-		// alert console that we've connected to remote peer.
-        console.log('We connected to peer ' + connection.peer);
-        $('#connectedRemotePeerId').text(connection.peer);
-	}
+	var peerSession = null;
 
-	var initializeConnection = function(c) {
-		c.on('open', function() { 
-		  // Receive messages
-		  c.on('data', function(data) {
-		  	// var json = JSON.parse(data);
-		    console.log('Received', data);
-		    $('#receivedMessage').text(data);
-		  });
-		});
-	}
-
-	var sendMessage = function(data) {
-		connection.send(data);
-	}
-
-	var stopPeer = function() {
-		session.destroy();
-	}
+	// return new PeerSession();
 
     return {
-        startPeer: startPeer,
-        connectToPeer: connectToPeer,
-        stopPeer: stopPeer,
-        sendMessage: sendMessage,
+    	startSession: function(gameUI) { 
+    		peerSession = new PeerSession(gameUI);
+    		peerSession.startSession();
+    		return peerSession; 
+    	},
+    	getSession: function() { return peerSession; },
+    	PeerMessageType: PeerMessageType,
     };
 
 });
