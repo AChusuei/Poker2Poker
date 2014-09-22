@@ -1,19 +1,21 @@
 define(['jquery', 'poker', 'peerActions'], function($, poker, peerActions) {
 
-    var resolvePlayerAction = null;
-    var session = peerActions.getSession();
+    var resolvePlayerAction;
 
     // UI triggered events
     $('#connectToPeer').click(function() {
-        session.connectToPeer(remotePeerId);
+        var remotePeerId = $('#remotePeerId').val();
+        peerActions.connectToPeer(remotePeerId);
     });
     $('#endGame').click(function() {
-        session.stopPeer();
+        peerActions.getSession().stopPeer();
         console.log('ENDING GAME!');
     });
     $('#sendMessage').click(function() {
         var msg = $('#messageToSend').val();
-        session.sendMessage(msg);
+        // var session = peerActions.getSession();      
+        // session.sendMessage(session.cc, msg);
+        peerActions.sendMessage(msg);
     });
     $('#startGame').click(function() {
         // var msg = $('#messageToSend').val();
@@ -77,6 +79,9 @@ define(['jquery', 'poker', 'peerActions'], function($, poker, peerActions) {
                     break;
                 case 'close':
                     $('#peerId').text(info.peerId + ', and was disconnected');
+                    break;
+                case 'data':
+                    $('#receivedMessage').text(info.data);
                     break;
             }
         },
