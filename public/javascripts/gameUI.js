@@ -14,8 +14,8 @@ define(['jquery', 'poker', 'peerActions'], function($, poker, peerActions) {
     $('#sendMessage').click(function() {
         var msg = $('#messageToSend').val();
         // var session = peerActions.getSession();      
-        // session.sendMessage(session.cc, msg);
-        peerActions.sendMessage(msg);
+        // peerActionssession.sendMessage(session.cc, msg);
+        peerActions.sendMessage(435, msg);
     });
     $('#startGame').click(function() {
         // var msg = $('#messageToSend').val();

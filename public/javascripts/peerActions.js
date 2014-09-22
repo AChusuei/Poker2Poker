@@ -1,9 +1,9 @@
 define(['peer'], function(peer) {
 
 	var peer;
-	// this.connections = {};
-	var connection;
-	// this.cc = '';
+	var connections = {};
+	// var connection;
+	var cc = '';
 	// this.resolvePlayerAction = null;
 	var gameUI;
 
@@ -14,29 +14,25 @@ define(['peer'], function(peer) {
 			console.log('My peer ID is: ' + id);
 			gameUI.signal('open', {id: id});
 		});
-		peer.on('connection', function(newConnection) {
+		peer.on('connection', function(remoteConnection) {
 			// when remote wants to connect to us...
-	    	console.log('Remote peer ' + newConnection.peer + ' asked for connection');
-	    	// peerSession.cc = newConnection.peer;
-	    	initializeConnection(newConnection);
-	    	connection = newConnection;
-	    	gameUI.signal('connection', { peerId : newConnection.peer }); // todo: signal more than one connection 
+	    	console.log('Remote peer ' + remoteConnection.peer + ' asked for connection');
+	    	initializeConnection(remoteConnection);
+	    	gameUI.signal('connection', { peerId : remoteConnection.peer }); // todo: signal more than one connection 
 		});
 		peer.on('close', function() {
 	    	console.log('peer ' + this.id + ' was closed.');
-	    	gameUI.signal('close', { peerId : newConnection.peer });
+	    	gameUI.signal('close', { peerId : this.id });
 		});
 	};
 
 	var connectToPeer = function(peerId) {
 		// when we want to connect to peer ... 
-		// this.cc = peerId;
-		connection = peer.connect(peerId);
-		initializeConnection(connection);
+		initializeConnection(peer.connect(peerId));
 
 		// alert console that we've connected to remote peer.
-        console.log('We connected to peer ' + connection.peer);
-        gameUI.signal('connection', { peerId : connection.peer }); // todo: signal more than one connection 
+        console.log('We connected to peer ' + connections[peerId].peer);
+        gameUI.signal('connection', { peerId : connections[peerId].peer }); // todo: signal more than one connection 
 	};
 
 	var initializeConnection = function(c) {
@@ -48,12 +44,14 @@ define(['peer'], function(peer) {
 		    	gameUI.signal('data', { data : data });
 		    });
 		});
+		cc = c.peer;
+		connections[cc] = c;
 		// peerSession.connections[c.peer] = c;
 	};
 
-	var sendMessage = function(data) {
+	var sendMessage = function(peerId, data) {
 		// peerSession.connections[peerId].send(data);
-		connection.send(data);
+		connections[cc].send(data);
 	};
 	
 	// PeerSession.prototype = {		
