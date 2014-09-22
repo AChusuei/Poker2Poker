@@ -46,12 +46,30 @@ define(['peer'], function(peer) {
 		});
 		cc = c.peer;
 		connections[cc] = c;
-		// peerSession.connections[c.peer] = c;
 	};
 
 	var sendMessage = function(peerId, data) {
 		// peerSession.connections[peerId].send(data);
 		connections[cc].send(data);
+	};
+
+	var sendMessageToAll = function(data) {
+		for (var key in connections) {
+			getAllConnections
+		    if (connections.hasOwnProperty(key)) {
+		    	connections[key].send(data);
+		    }
+		}
+	};
+
+	var getAllConnections = function(data) {
+		var c = [];
+		for (var key in connections) {
+		    if (connections.hasOwnProperty(key)) {
+		    	c.push(connections[key]);
+		    }
+		}
+		return c;
 	};
 	
 	// PeerSession.prototype = {		
@@ -92,6 +110,8 @@ define(['peer'], function(peer) {
     	startSession: startSession,
     	connectToPeer: connectToPeer,
     	sendMessage: sendMessage,
+    	sendMessageToAll: sendMessageToAll,
+    	getAllConnections: getAllConnections,
     	// startSession: function(gameUI) { 
     	// 	peerSession = new PeerSession(gameUI);
     	// 	peerSession.startSession();

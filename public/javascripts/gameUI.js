@@ -15,13 +15,24 @@ define(['jquery', 'poker', 'peerActions'], function($, poker, peerActions) {
         var msg = $('#messageToSend').val();
         // var session = peerActions.getSession();      
         // peerActionssession.sendMessage(session.cc, msg);
-        peerActions.sendMessage(435, msg);
+        peerActions.sendMessageToAll(msg);
     });
-    $('#startGame').click(function() {
+    $('#startTournamentGame').click(function() {
         // var msg = $('#messageToSend').val();
         // create player(s) for game.
-        var player = poker.createPlayer()
-        poker.startTournamentGame(peerActions.connection);
+        var players = [];
+        var levels = [
+            { smallBlind: 15, bigBlind: 30, ante: 1, min: 10 },
+            { smallBlind: 20, bigBlind: 40, ante: 2, min: 10 },
+            { smallBlind: 25, bigBlind: 50, ante: 3, min: 10 }
+        ];
+        var connections = peerActions.getAllConnections();
+        for (var c = 0; c < connections.length; c++) {
+            var player = poker.createRemotePlayer(connections[c], 0);
+            players.push(player);
+        }
+        players.push(poker.createLocalPlayer('Alan Chusuei', 5000));
+        poker.startTournamentGame(players, levels, 5000);
     });
     console.log('ui has been set up and is ready to go!');
 

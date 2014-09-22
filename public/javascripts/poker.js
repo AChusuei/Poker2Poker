@@ -9,7 +9,9 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		}
 	}
 	HandEvaluator.prototype = {
+		findHandFromCardSet: function() {
 
+		},
 	}
 
     /*
@@ -24,6 +26,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		this.currentPlayer = this.button;
 		this.deck = new playingCards();
 		this.blinds = null;
+		this.handEvaluator = new HandEvaluator();
 	}
 	Table.prototype = {
 		initializePlayerPositions: function(players) {
@@ -96,8 +99,11 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			return pot;
 		},
 		// One whole game. Winner is the last one standing.
-		startTournamentGame: function(players, levels) {
+		startTournamentGame: function(players, levels, startingStack) {
 			var table = new Table(players);
+			_.each(this.players, function(player) {
+				player.stack = startingStack;
+			});
 			var blindStructure = poker.createBlindStructure(startingStack, levels);
 			this.startRound();
 		},
@@ -180,9 +186,12 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				}
 			}
 		},
+		getCurrentPot: function() {
+			return this.pots[this.pots.length - 1];
+		},
 		changePlayerState: function(response) {
 			var player = this.currentLivePlayer();
-			var pot = null; //getlastpot
+			var pot = this.getCurrentPot();
 			var amount = response.amount;
 			switch (response.action) {
 				case Player.Action.CHECK: player.check(); break;
@@ -199,7 +208,6 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		},
 		isStreetOver: function() {
 			var nonFoldedPlayers = this.nonFoldedPlayers();
-		    // console.log('nonFoldedPlayers:' + nonFoldedPlayers.length);
 		    var highBet = _.max(nonFoldedPlayers, function(player) {
 		    	return player.liveBet; 
 		    }).liveBet;
@@ -216,7 +224,6 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				return (madeWager(player) && player.liveBet == highBet) ||
 				       (player.action == Player.Action.ALLIN && player.liveBet <= highBet)
 		    }, this);
-		    // console.log('HB/1PL/RC/AC:' + highBet + '/' + onlyOnePlayerLeft + '/' + restChecked + '/' + restCalledTheHighBetOrAllIn);
 			return onlyOnePlayerLeft() || restChecked || restCalledTheHighBetOrAllIn;
 		},
 		nonFoldedPlayers: function() {
@@ -231,18 +238,54 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				console.log('player(seat)/stack/bet/action:' + player.name + '(' + player.seat + (player.seat == button ? 'B' : '') + ')/' + player.stack + '/' + player.liveBet + '/' + player.action);
 		    }, this);
 		},
-		// Given a closed street of betting, evaluate pots for remaining players.
-		resolvePots: function(pots, players) {
-			var nonFoldedAllInPlayers = _.filter(this.players, function(player) { 
-				return player.action != Player.Action.FOLD;
-		    }, this);
+		// Given a closed street of betting, resolve any side pots that have occurred from all-ins.
+		resolvePots: function() {
+			var nonFoldedPlayers = this.nonFoldedPlayers();
+			// Only create side pots if we have all in players with liveBets still in play.
+			// Note that the liveBet is what we decrement to ensure that a player is as eligile for as many pots as possible.
+			var nonFoldedAllInPlayers = _.filter(nonFoldedPlayers, function(player) { 
+				return player.action == Player.Action.ALLIN && player.liveBet > 0;
+		    });
 		    if (nonFoldedAllInPlayers.length > 0) {
-		    	// create pot for allin players
-		    }
-		    // find minimum bet and pull players with surplus 
-		    var highBet = _.max(nonFoldedPlayers, function(player) {
-		    	return player.liveBet; 
-		    }).liveBet;
+				var currentPot = this.getCurrentPot();
+				var sidePot = this.startPot();
+				var lowestAllInBet = _.min(nonFoldedAllInPlayers, function(player) {
+			    	return player.liveBet; 
+			    }).liveBet;
+			    for (p = 0; p < nonFoldedPlayers; p++) {
+			    	var skim = nonFoldedPlayers[p].liveBet - lowestAllInBet;
+			    	if (skim > 0) {
+			    		currentPot.amount -= skim;
+			    		sidePot.build(skim, nonFoldedPlayers[p]);
+			    	}
+			    	nonFoldedPlayers[p].liveBet -= lowestAllInBet;
+			    }
+			    this.pots.push(sidePot);
+			    this.skimPots(); // we may need to skim another pot.
+			} else {
+				// clear all live bets for this street
+			    _.each(this.players, function(player) {
+			    	player.liveBet = 0;
+			    });
+			}
+		},
+		resolvePotWinners: function() {
+			while (this.pots.length > 0) {
+				var currentPot = this.pots.pop();
+				// if we have split pots, then everyone in this list has to be a winner
+				var currentWinners = []; 
+				_.each(currentPot.players, function (player, name) {
+					if (currentWinners.length > 0) {
+						currentWinners = this.handEvaluator.getWinner(currentWinners[0], player);
+					} else {
+						currentWinners.push(player);
+					}
+				}, this);
+				var award = currentPot.amount / currentWinners.length;
+				_.each(currentWinners, function (winner) {
+					winner.stack += award;
+				});
+			}
 		},
 		getRoundWinner: function() {
 			var survivors = _.filter(this.players, function(p) { return p.status == PlayerRoundStatus.IN; } );
@@ -270,9 +313,9 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		},
 		findGameWinner: function() {
 			// Someone should have chips remaining, otherwise something REALLY REALLY wrong happened here.
-			var winners = _.filter(this.players, function(p) { return p.stack > 0; } );
-			if (winners.length == 1) {
-				return winners[0];
+			var remainingPlayers = _.filter(this.players, function(p) { return p.stack > 0; } );
+			if (remainingPlayers.length == 1) {
+				return remainingPlayers[0];
 			} else {
 				return null;
 			}
@@ -303,11 +346,14 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
     Pot.prototype = {
     	build: function(bet, player) {
     		this.amount += bet;
-    		// Adds to list if player isn't there.
-    		this.players[player.name] = true; 
+    		this.players[player.name] = player; 
     	},
     	isEligible: function(player) {
     		return (player.name in this.players);
+    	},
+    	reconcile: function() {
+    		// look at live bets by players 
+    		var allInPlayers = _.filter([1, 2, 3, 4, 5, 6], function(num){ return num % 2 == 0; });
     	}
     }
 
@@ -333,11 +379,11 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 	/*
      Start Player object. Mostly information around remaining stack and betting methods.
      */
-	function Player(name, stack, session, local) {
+	function Player(name, stack, connection) {
 	 	this.name = name;
 		this.stack = stack;
 		this.liveBet = 0;
-		this.session = session;
+		this.connection = connection;
 	};
 	Player.Action = {
 		YETTOACT: 'YetToAct', // Player passes at making a bet
@@ -352,13 +398,13 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 	};
 	Player.prototype = {
 		isLocal: function() {
-			return (this.session == null);
+			return (this.connection == null);
 		},
 		promptForAction: function(options, callBack) {
-			if (this.local) {
+			if (this.isLocal()) {
 				gameUI.promptPlayerAction(this, options, callBack);
 			} else {
-				session.promptPlayerAction(options, callBack);
+				this.connection.promptPlayerAction(options, callBack);
 			}
 		},
 		// Player checks. Nothing cheanges monetarily for player.
@@ -431,8 +477,8 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
      */
 
     return {
-     	createPlayer : function(name, stack) { return new Player(name, stack, null, true); },
-     	createConnectedPlayer : function(conn, stack) { return new Player(connection.peer, stack, connection, false); },
+     	createLocalPlayer : function(name, stack) { return new Player(name, stack, null, true); },
+     	createRemotePlayer : function(conn, stack) { return new Player(connection.peer, stack, connection, false); },
      	createBlindStructure : function(startingStack, levels) { return new BlindStructure(startingStack, levels); },
      	createTable : function(players) { return new Table(players); },
      	createPot : function(players) { return new Pot(); },
