@@ -1,8 +1,8 @@
 define(['underscore'], function() {
 
 	function Card(rank, suit) {
-		this.rank = rank;
-		this.suit = suit;
+		this.rank = Card.Rank[rank];
+		this.suit = Card.Suit[suit];
 	};
 	Card.prototype = {
 		toString: function() {
@@ -20,8 +20,8 @@ define(['underscore'], function() {
 				return 0;
 			}
 		},
-		convert: function(string) {
-			return new Card(Card.Rank[string.substring(0, 1)], Card.Suit[string.substring(1, 2)]);
+		convertFromString: function(string) {
+			return new Card(string.substring(0, 1), string.substring(1, 2));
 		},
 	};
 	Card.Rank = {
@@ -77,66 +77,97 @@ define(['underscore'], function() {
 				return this.handRank - that.handRank;
 			}
 		},
+		listCardRanks: function() {
+			var ranks = '(';
+			for (var c = 0; c < this.cards.length; c++) {
+				if (c != 0) { 
+					ranks += ','; 
+				}
+				ranks += this.cards[c].rank[1];
+			}
+			ranks += ')';
+			return ranks;
+		},
+		toString: function() {
+			switch (this.handRank) {
+				case Hand.Rank.StraightFlush:
+					return this.cards[0].rank[1] + ' high straight flush of ' + this.suit;
+				case Hand.Rank.Flush:
+					return 'Flush ' + this.listCardRanks() + ' of ' + this.suit;
+				case Hand.Rank.Straight:
+					return this.cards[0].rank[1] + ' high straight';
+			}
+		},
 	};
 
 	/* 
 	 Evaluates given cards to best five card poker hand.
 	 */
 	function HandEvaluator() {
-		this.hand = 6;
+		
 	};
 	HandEvaluator.prototype = {
 		evaluateHand: function(playerCards, communityCards) {
-			var seven = communityCards.slice(0);
-			seven.push(playersCards);
-			var sortedCards = sortCards(seven);
-			return findHand(sortedCards);
+			var seven = communityCards.concat(playerCards);
+			console.log('seven: ' + seven);
+			var sortedCards = this.sortCards(seven);
+			console.log('sorted cards: ' + sortedCards);
+			return this.findHand(sortedCards);
 		},
 		// Sorts card in rank order from highest to lowest
 		sortCards: function(cardSet) {
-			var original = _.sortBy(cardSet, function(card) { 
-				return card.getRank(); 
-			});
-			return original.reverse();
+			return _.sortBy(cardSet, function(c) { 
+				return c.getRank(); 
+			}).reverse();
 		},
 		findHand: function(cardSet) {
-			var flushOrStraight = findHighestFlushOrStraight(cardSet);
+			var flushOrStraight = this.findHighestFlushOrStraight(cardSet);
 			if (flushOrStraight) {
 				return flushOrStraight;
 			} else {
-				return findDuplicateTypeHand(cardSet);
+				return this.findDuplicateTypeHand(cardSet);
 			}
 		},
 		findHighestFlushOrStraight: function(cardSet) {
 		    var flush = this.getAllFlushCards(cardSet);
 		    if (flush) {
+		    	console.log('flush: ' + flush);
 		    	var straightFlush = this.findHighestStraight(flush);
 		    	if (straightFlush) {
-		    		return new Hand(Hand.Rank.StraightFlush, straightFlush);
+		    		return new Hand(Hand.Rank.StraightFlush, straightFlush.cards, straightFlush.cards[0].suit);
 		    	} else {
-		    		return new Hand(Hand.Rank.Flush, flush, suit);
+		    		return new Hand(Hand.Rank.Flush, flush, flush[0].suit);
 		    	}
 		    } else {
 		    	return this.findHighestStraight(cardSet);
 		    }
 		},
 		getAllFlushCards: function(cardSet) {
-			return _.chain(cardSet)
+			console.log('getAllFlushCards(cardSet): ' + cardSet);
+			var flush = _.chain(cardSet)
 			    .groupBy(function(card) { return card.suit; } )
 				.filter(function(cards) { return cards.length > 4; } )
 				.value();
+			return (_.isEmpty(flush) ? undefined : _.values(flush)[0]);
 		},
 		findHighestStraight: function(cardSet) {
-		    var straight = _.reduce(cardSet, function(sl, c) { 
-		    	if (sl.length != 0 && sl[sl.length - 1].getRank() - 1 == c.getRank()) {
-		    		sl.push(c);
-		    		return sl; 
-		    	} else {
-		    		return [c];
-	    		} 
-		    }, []); 
+		    var straight = _.reduce(cardSet, function(sl, c) {
+		    	if (sl.length < 5) {
+			    	if (sl.length != 0 && sl[sl.length - 1].getRank() - 1 == c.getRank()) {
+			    		sl.push(c);
+			    		return sl; 
+			    	} else {
+			    		return [c];
+		    		}
+	    		} else { 
+	    			return sl;
+	    		}
+		    }, []);
+		    console.log('straight?: ' + straight); 
 		    if (straight.length >= 5 || ((straight.length == 4) && (straight[0] == Card.Rank[5]) && _.contains(cardSet, Card.Rank.Ace))) {
-		        return new Hand(Hand.Rank.Straight, straight);
+		    	console.log('straight!: ' + straight);
+		    	var hand = new Hand(Hand.Rank.Straight, straight);
+		        return hand;
 		    } else {
 		        return;
 		    }
@@ -227,7 +258,8 @@ define(['underscore'], function() {
 	};
 
 	return {
-		evaluator: new HandEvaluator(),
-		getCard: function(string) { return Card.prototype.convert(string); },
+		evaluateHand: function(playerCards, community) { return HandEvaluator.prototype.evaluateHand(playerCards, community); },
+		getCardFromString: function(string) { return Card.prototype.convertFromString(string); },
+		getCard: function(rank, suit) { return new Card(rank, suit); },
 	};
 });
