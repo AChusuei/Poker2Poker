@@ -285,7 +285,8 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				var highHand; 
 				_.each(currentPot.players, function (player) {
 					if (currentWinners.length > 0) {
-						var currentHand = this.handEvaluator.evaluateHand(player.hand, this.communityCards);
+						var seven = this.communityCards.concat(player.hand);
+						var currentHand = this.handEvaluator.evaluateHand(seven);
 						var diff = currentHand.compare(highHand);
 						if (diff == 0) {
 							currentWinners.push(player);

@@ -47,8 +47,8 @@ define(['underscore'], function() {
 		C: 'Clubs',
 	};
 
-	function Hand(handRank, cards, suit) {
-    	this.handRank = handRank;
+	function Hand(rank, cards, suit) {
+    	this.rank = rank;
     	this.cards = cards;
     	this.suit = suit;
     };
@@ -107,10 +107,9 @@ define(['underscore'], function() {
 		
 	};
 	HandEvaluator.prototype = {
-		evaluateHand: function(playerCards, communityCards) {
-			var seven = communityCards.concat(playerCards);
-			console.log('seven: ' + seven);
-			var sortedCards = this.sortCards(seven);
+		evaluateHand: function(cardSet) {
+			console.log('seven: ' + cardSet);
+			var sortedCards = this.sortCards(cardSet);
 			console.log('sorted cards: ' + sortedCards);
 			return this.findHand(sortedCards);
 		},
@@ -152,8 +151,10 @@ define(['underscore'], function() {
 		},
 		findHighestStraight: function(cardSet) {
 		    var straight = _.reduce(cardSet, function(sl, c) {
-		    	if (sl.length < 5) {
-			    	if (sl.length != 0 && sl[sl.length - 1].getRank() - 1 == c.getRank()) {
+		    	var lastRank = (sl.length == 0 ? 0 : sl[sl.length - 1].getRank());
+		    	var nextRank = c.getRank();
+		    	if (sl.length < 5 && lastRank != nextRank) {
+			    	if (lastRank - 1 == nextRank) {
 			    		sl.push(c);
 			    		return sl; 
 			    	} else {
@@ -164,7 +165,12 @@ define(['underscore'], function() {
 	    		}
 		    }, []);
 		    console.log('straight?: ' + straight); 
-		    if (straight.length >= 5 || ((straight.length == 4) && (straight[0] == Card.Rank[5]) && _.contains(cardSet, Card.Rank.Ace))) {
+		    console.log('straight.length: ' + straight.length);
+		    console.log('straight[0]: ' + straight[0]);
+		    console.log('Card.Rank[5]: ' + Card.Rank[5]);
+		    console.log('cardSet[0]: ' + cardSet[0].rank);
+		    console.log('Card.Rank.A: ' + Card.Rank.A); 
+		    if (straight.length >= 5 || ((straight.length == 4) && (straight[0].rank == Card.Rank[5]) && (cardSet[0].rank == Card.Rank.A))) {
 		    	console.log('straight!: ' + straight);
 		    	var hand = new Hand(Hand.Rank.Straight, straight);
 		        return hand;
@@ -258,8 +264,10 @@ define(['underscore'], function() {
 	};
 
 	return {
-		evaluateHand: function(playerCards, community) { return HandEvaluator.prototype.evaluateHand(playerCards, community); },
+		evaluateHand: function(cardSet) { return HandEvaluator.prototype.evaluateHand(cardSet); },
 		getCardFromString: function(string) { return Card.prototype.convertFromString(string); },
 		getCard: function(rank, suit) { return new Card(rank, suit); },
+		Card : { Rank: Card.Rank},
+		Hand : { Rank: Hand.Rank},
 	};
 });
