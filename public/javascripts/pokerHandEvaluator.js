@@ -143,9 +143,7 @@ define(['underscore'], function() {
 	};
 	HandEvaluator.prototype = {
 		evaluateHand: function(cardSet) {
-			console.log('seven: ' + cardSet);
 			var sortedCards = this.sortCards(cardSet);
-			console.log('sorted cards: ' + sortedCards);
 			return this.findHand(sortedCards);
 		},
 		// Sorts card in rank order from highest to lowest
@@ -165,7 +163,6 @@ define(['underscore'], function() {
 		findHighestFlushOrStraight: function(cardSet) {
 		    var flush = this.getAllFlushCards(cardSet);
 		    if (flush) {
-		    	console.log('flush: ' + flush);
 		    	var straightFlush = this.findHighestStraight(flush);
 		    	if (straightFlush) {
 		    		return new Hand(Hand.Rank.StraightFlush, straightFlush.cards, straightFlush.cards[0].suit);
@@ -177,7 +174,7 @@ define(['underscore'], function() {
 		    }
 		},
 		getAllFlushCards: function(cardSet) {
-			console.log('getAllFlushCards(cardSet): ' + cardSet);
+			// console.log('getAllFlushCards(cardSet): ' + cardSet);
 			var flush = _.chain(cardSet)
 			    .groupBy(function(card) { return card.suit; } )
 				.filter(function(cards) { return cards.length > 4; } )
@@ -199,12 +196,12 @@ define(['underscore'], function() {
 	    			return sl;
 	    		}
 		    }, []);
-		    if (straight.length >= 5 || ((straight.length == 4) && (straight[0].rank == Card.Rank.Five) && (cardSet[0].rank == Card.Rank.Ace))) {
-		    	console.log('straight!: ' + straight);
-		    	var hand = new Hand(Hand.Rank.Straight, straight);
-		        return hand;
+		    if (straight.length >= 5) {
+		    	return new Hand(Hand.Rank.Straight, straight);
+		    } else if ((straight.length == 4) && (straight[0].rank == Card.Rank.Five) && (cardSet[0].rank == Card.Rank.Ace)) {
+		        return new Hand(Hand.Rank.Straight, straight.concat(cardSet[0]));
 		    } else {
-		        return;
+		    	return;
 		    }
 		},
 		findDuplicateTypeHand: function(cardSet) {
@@ -220,36 +217,31 @@ define(['underscore'], function() {
 			    	if (pairsyHand) {
 				    	return pairsyHand;
 				    } else {
-				    	return this.findHighCards(cardSet);
+				    	return new Hand(Hand.Rank.HighCard, this.findHighCards(cardSet).slice(0, 5));
 				    }
 			    }
 		    }
 		},
 		findQuads: function(cardSet) {
 			var quads = this.getOrderedCardsByCount(cardSet, 4);
-			if (quads) {
-				var highCards = this.findHighCards(cardSet, quads);
-				quads.push(highCards);
-				return new Hand(Hand.Rank.FourOfAKind, quads);
+			if (quads.length > 0) {
+				var highCards = this.findHighCards(cardSet, quads[0]);
+				return new Hand(Hand.Rank.FourOfAKind, quads[0].concat(highCards[0]));
 			} else {
 				return;
 			}
 		},
 		findTripsOrFullHouse: function(cardSet) {
 			var trips = this.getOrderedCardsByCount(cardSet, 3);
-			if (trips) {
-				if (trips.length == 2) {
-					return new Hand(Hand.Rank.FullHouse, trips);
-				} else if (trips.length == 1) {
-					var pairs = this.findPairs(cardSet);
-					if (pairs.length > 0) {
-						trips.push(pairs);
-						return new Hand(Hand.Rank.FullHouse, trips);
-					} else {
-						var highCards = this.findHighCards(cardSet, trips);
-						trips.push(highCards);
-						return new Hand(Hand.Rank.ThreeOfAKind, trips);
-					}
+			if (trips.length == 2) {
+				return new Hand(Hand.Rank.FullHouse, trips[0].concat(trips[1].slice(0, 2)));
+			} else if (trips.length == 1) {
+				var pairs = this.getOrderedCardsByCount(cardSet, 2);
+				if (pairs.length > 0) {
+					return new Hand(Hand.Rank.FullHouse, trips[0].concat(pairs[0]));
+				} else {
+					var highCards = this.findHighCards(cardSet, trips);
+					return new Hand(Hand.Rank.ThreeOfAKind, trips[0].concat(highCards.slice(0, 2)));
 				}
 			} else {
 				return;
@@ -257,38 +249,35 @@ define(['underscore'], function() {
 		},
 		findPairs: function(cardSet) {
 			var pairs = this.getOrderedCardsByCount(cardSet, 2);
-			if (pairs) {
-				if (pairs.length >= 2) { // two pair
-					var twoPairs = pairs.slice(0, 2);
-					var highCards = this.findHighCards(cardSet, twoPairs);
-					twoPairs.push(highCards);
-					return new Hand(Hand.Rank.TwoPair, twoPairs);
-				} else if (pairs.length == 1) { // two pair
-					var highCards = this.findHighCards(cardSet, pairs);
-					pairs.push(highCards);
-					return new Hand(Hand.Rank.OnePair, pairs);
-				}
-				return;
+			if (pairs.length >= 2) { // two pair
+				var twoPairs = pairs[0].concat(pairs[1]);
+				var highCards = this.findHighCards(cardSet, twoPairs);
+				return new Hand(Hand.Rank.TwoPair, twoPairs.concat(highCards[0]));
+			} else if (pairs.length == 1) { // two pair
+				var highCards = this.findHighCards(cardSet, pairs[0]);
+				return new Hand(Hand.Rank.OnePair, pairs[0].concat(highCards.slice(0, 3)));
 			} else {
 				return;
 			}
 		},
 		findHighCards: function(cardSet, ignoreRanks) {
-			return _.chain(cardSet)
-		        .map(function(card) { return card.rank; }) // { rank }
-		        .filter(function(rank) { return !_.contains(ignoreRanks, rank); } )
-				.sortBy(function(rank) { return rank; } ) // { rank } order by asc
-				.reverse() // { rank } order by desc
+			var cards = _.chain(cardSet)
+				.difference(ignoreRanks)
+				.sortBy(function(card) { return card.rank; } )
+				.reverse()
 				.value();
+			return cards;
 		},
 		getOrderedCardsByCount: function(cardSet, count) {
-			return _.chain(cardSet)
+			var cards = _.chain(cardSet)
 		        .groupBy(function(card) { return card.rank; } ) // { rank, [cards] }
-		        .filter(function(cards) { return cards.length == count; } ) // { rank, [cards].length == count }
-		        .map(function(cards, rank) { return rank; }) // { rank }
-				.sortBy(function(rank) { return rank; } ) // { rank } order by asc
-				.reverse() // { rank } order by desc
+		        .pairs() // [ 'rank', [cards] ], **rank is no longer a number**
+		        .filter(function(rankCardsPair) { return rankCardsPair[1].length == count; } )// { rank, [cards].length == count }
+		        .map(function(rankCardsPair) { return rankCardsPair[1]; }) // [ [cards] ]
+				.sortBy(function(cards) { return cards[0].rank; } ) // [ [ cards ] ] order asc
+				.reverse() // [ [ cards ] ] order desc
 				.value();
+			return cards;
 		},
 	};
 
