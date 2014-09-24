@@ -165,7 +165,7 @@ if (Array.indexOf === undefined) {
             "7": "Seven",
             "8": "Eight",
             "9": "Nine",
-            "10": "Ten",
+            "T": "Ten",
             "J": "Jack",
             "Q": "Queen",
             "K": "King",

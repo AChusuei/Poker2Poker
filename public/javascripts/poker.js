@@ -1,18 +1,13 @@
 define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, moment) {
 
-	/* 
-	 Evaluates given cards to best five card poker hand.
-	 */
 	function HandEvaluator(cards) {
-		if (cards.length != 7) {
-			throw('Wrong number of cards given to evaluator:' + cards.length);
-		}
+
 	}
 	HandEvaluator.prototype = {
-		findHandFromCardSet: function() {
+		getWinner: function(incumbent, challenger, communityCards) {
 
 		},
-	}
+	};
 
     /*
      Start table object regarding table position and dealing.
@@ -25,7 +20,6 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		// Index of player to whom action is on.
 		this.currentPlayer = this.button;
 		this.deck = new playingCards();
-		this.blinds = null;
 		this.handEvaluator = new HandEvaluator();
 	}
 	Table.prototype = {
@@ -55,12 +49,11 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		currentLivePlayer: function() {
 			return this.players[this.currentPlayer];
 		},
-		dealCardsAndSetRoundStatus: function() {
+		dealCards: function() {
 			this.deck.shuffle();
 			// clear all player hands 
 			_.each(this.players, function(p) {
 				p.hand = [];
-				p.status = this.PlayerRoundStatus.OUT
 			}, this);
 			
 			_.chain(this.players)
@@ -70,7 +63,6 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 					var f = this.deck.draw();
 					var s = this.deck.draw();
 					p.hand.push(f, s);
-					p.status = this.PlayerRoundStatus.IN
 				}, this);
 		},
 		// Note that this sets the table such that the next live player should be UTG
@@ -111,6 +103,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		startRound: function() {
 			// Set up main pot.
 			this.table.blinds = blindStructure.getBlindLevel();
+			this.dealCards();
 			this.pots = [ this.postBlindsAndAntes() ]; // todo: antes might be low, might req side pot ... 
 			this.street = this.Street.PREFLOP;
 			this.startStreet();
@@ -166,6 +159,20 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				actions: actions,
 			};
 		},
+		dealCommunityCards: function() {
+			switch (this.street) {
+				case this.Street.FLOP:
+					var f1 = this.deck.draw();
+					var f2 = this.deck.draw();
+					var f3 = this.deck.draw();
+					this.communityCards = [f1, f2, f3];
+					break;
+				case this.Street.TURN:
+				case this.Street.RIVER:
+					this.communityCards.push(this.deck.draw());
+					break;
+			}
+		},
 		resolvePlayerAction: function(response) {
 			this.changePlayerState(response);
 			if (!this.isStreetOver()) {
@@ -173,6 +180,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			} else {
 				this.resolvePots();
 				if (++this.street < this.Street.SHOWDOWN && this.nonFoldedPlayers().length > 1) {
+					this.dealCommunityCards();
 					this.startStreet();	
 				} else {
 					this.resolvePotWinners();
@@ -272,12 +280,21 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		resolvePotWinners: function() {
 			while (this.pots.length > 0) {
 				var currentPot = this.pots.pop();
-				// if we have split pots, then everyone in this list has to be a winner
-				var currentWinners = []; 
-				_.each(currentPot.players, function (player, name) {
+				// If we have split pots, then everyone in this list has to be a winner
+				var currentWinners = [];
+				var highHand; 
+				_.each(currentPot.players, function (player) {
 					if (currentWinners.length > 0) {
-						currentWinners = this.handEvaluator.getWinner(currentWinners[0], player);
+						var currentHand = this.handEvaluator.evaluateHand(player.hand, this.communityCards);
+						var diff = currentHand.compare(highHand);
+						if (diff == 0) {
+							currentWinners.push(player);
+						} else if (diff > 0) {
+							currentWinners = [player];
+							highHand = currentHand;
+						}
 					} else {
+						highHand = this.handEvaluator.evaluateHand(player.hand, this.communityCards);
 						currentWinners.push(player);
 					}
 				}, this);
@@ -351,10 +368,6 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
     	isEligible: function(player) {
     		return (player.name in this.players);
     	},
-    	reconcile: function() {
-    		// look at live bets by players 
-    		var allInPlayers = _.filter([1, 2, 3, 4, 5, 6], function(num){ return num % 2 == 0; });
-    	}
     }
 
 	/*

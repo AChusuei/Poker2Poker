@@ -55,7 +55,6 @@ define(['peer'], function(peer) {
 
 	var sendMessageToAll = function(data) {
 		for (var key in connections) {
-			getAllConnections
 		    if (connections.hasOwnProperty(key)) {
 		    	connections[key].send(data);
 		    }
