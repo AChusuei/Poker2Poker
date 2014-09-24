@@ -96,16 +96,16 @@ define(['underscore'], function() {
 	};
 	Hand.prototype = {
 		compare: function(that) {
-			if (this.handRank == that.handRank) {
+			if (this.rank == that.rank) {
 				for (c = 0; c < this.cards.length; c++) {
 					var diff = this.cards[c].compare(that.cards[c]);
 					if (diff != 0) {
 						return diff;
 					}
-					return 0;
 				}
+				return 0;
 			} else {
-				return this.handRank - that.handRank;
+				return this.rank - that.rank;
 			}
 		},
 		listCardRanks: function() {
@@ -120,7 +120,7 @@ define(['underscore'], function() {
 			return ranks;
 		},
 		toString: function() {
-			switch (this.handRank) {
+			switch (this.rank) {
 				case Hand.Rank.StraightFlush:
 					if (this.cards[0].rank == Card.Rank.Ace) {
 						return 'Royal flush of ' + this.suit + '. Damn.';
@@ -165,16 +165,15 @@ define(['underscore'], function() {
 		    if (flush) {
 		    	var straightFlush = this.findHighestStraight(flush);
 		    	if (straightFlush) {
-		    		return new Hand(Hand.Rank.StraightFlush, straightFlush.cards, straightFlush.cards[0].suit);
+		    		return new Hand(Hand.Rank.StraightFlush, straightFlush.cards.slice(0, 5), straightFlush.cards[0].suit);
 		    	} else {
-		    		return new Hand(Hand.Rank.Flush, flush, flush[0].suit);
+		    		return new Hand(Hand.Rank.Flush, flush.slice(0, 5), flush[0].suit);
 		    	}
 		    } else {
 		    	return this.findHighestStraight(cardSet);
 		    }
 		},
 		getAllFlushCards: function(cardSet) {
-			// console.log('getAllFlushCards(cardSet): ' + cardSet);
 			var flush = _.chain(cardSet)
 			    .groupBy(function(card) { return card.suit; } )
 				.filter(function(cards) { return cards.length > 4; } )

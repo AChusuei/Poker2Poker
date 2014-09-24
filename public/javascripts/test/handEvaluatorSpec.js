@@ -19,24 +19,41 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
 		return seven; 
 	}
 
+	var verifyHandOneBeatsHandTwo = function(h1, h2) {
+		var hand1 = handEvaluator.evaluateHand(h1);
+		var hand2 = handEvaluator.evaluateHand(h2)
+		// console.log('hand1:', hand1);
+        expect(hand1.compare(hand2) > 0).toBeTruthy();
+	}
+
+	var verifyHandOneTiesHandTwo = function(h1, h2) {
+		var hand1 = handEvaluator.evaluateHand(h1);
+		var hand2 = handEvaluator.evaluateHand(h2)
+        expect(hand1.compare(hand2)).toEqual(0);
+	}  
+
 	var AtoTnoFlush = getSeven('AS,KS,QS,JS,TC,KC,QC');
 	var Jto7noFlush = getSeven('JS,4H,8S,3C,9S,TS,7H');
 	var JackHighFlush = getSeven('JS,4S,8S,3S,9S,TS,7H');
+	var JackHighFlushHigher = getSeven('JS,5S,8S,3S,9S,TS,7H');
 	var wheelnoFlush = getSeven('JD,4S,8S,3S,5S,AC,2H');
 	var wheelstraightFlush = getSeven('JD,4C,8S,3C,5C,AC,2C');
 	var royalFlush = getSeven('JS,8C,KS,3H,QS,TS,AS');
-	var sixFlushAcewithLowerJackHighSF = getSeven('JS,8S,KS,3H,9S,TS,7S');
+	var sixFlushKingwithLowerJackHighSF = getSeven('JS,8S,KS,3H,9S,TS,7S');
 	var sixFlushWithKingNoLowerSF = getSeven('JS,4S,KS,3S,9S,TS,7H');
 	var tripsWithNineHighFlush = getSeven('3D,6D,2D,4S,4D,4C,9D');
 	var twoPairsWithFlush = getSeven('4S,6S,6D,TS,4D,QS,AS');
 	var quads = getSeven('JH,4S,JC,3S,JD,KS,JS');
 	var twoSetsofTripsDoyleBrunson = getSeven('TS,2S,TC,3S,2D,TH,2H');
 	var tripsPlusTwoPair = getSeven('KD,4S,4C,KS,JD,4H,JH');
+	var minimumFullHouse = getSeven('KD,4S,4C,QS,JD,4H,JH');
 	var justTrips = getSeven('3S,AS,KD,9S,TD,3C,3H');
 	var threePairs = getSeven('KS,6S,KD,JS,QD,QC,JH');
-	var twoPairsNoFlush = getSeven('4S,6S,6D,TS,4D,QC,AH');
+	var twoPairsNoFlushKingKicker = getSeven('4S,6S,6D,TS,4D,QC,KH');
+	var twoPairsNoFlushAceKicker = getSeven('4S,6S,6D,TS,4D,QC,AH');
 	var onePair = getSeven('2S,7S,TD,8S,QD,8C,5H');
 	var kingHigh = getSeven('3S,6S,2D,QS,KD,4C,9H');
+	var aceHigh = getSeven('3S,6S,2D,QS,AD,4C,9H');
 	
 	var verifyStraight = function(hand, highCard) {
 		expect(hand.rank == handEvaluator.Hand.Rank.Straight || 
@@ -65,6 +82,8 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
 		verifyStraight(hand, highCard);
 		verifyFlush(hand);
 	}
+
+
 
 	describe('A Hand Evaluator', function() {
 
@@ -104,7 +123,7 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
         });
 
         it('should return a straight flush for sixFlushAcewithLowerJackHighSF', function() {
-			var hand = handEvaluator.evaluateHand(sixFlushAcewithLowerJackHighSF);
+			var hand = handEvaluator.evaluateHand(sixFlushKingwithLowerJackHighSF);
             verifyStraightFlush(hand, handEvaluator.Card.Rank.Jack);
         });
 
@@ -168,6 +187,16 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
             expect(hand.cards[4].rank).toEqual(handEvaluator.Card.Rank.King);
         });
 
+        it('should return a full house for minimumFullHouse', function() {
+			var hand = handEvaluator.evaluateHand(minimumFullHouse);
+            expect(hand.rank).toEqual(handEvaluator.Hand.Rank.FullHouse);
+            expect(hand.cards[0].rank).toEqual(handEvaluator.Card.Rank.Four);
+            expect(hand.cards[1].rank).toEqual(handEvaluator.Card.Rank.Four);
+            expect(hand.cards[2].rank).toEqual(handEvaluator.Card.Rank.Four);
+            expect(hand.cards[3].rank).toEqual(handEvaluator.Card.Rank.Jack);
+            expect(hand.cards[4].rank).toEqual(handEvaluator.Card.Rank.Jack);
+        });
+
         it('should return a three of a kind for justTrips', function() {
 			var hand = handEvaluator.evaluateHand(justTrips);
 			expect(hand.rank).toEqual(handEvaluator.Hand.Rank.ThreeOfAKind);
@@ -189,13 +218,13 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
         });
 
         it('should return a two pair high kicker for twoPairsNoFlush', function() {
-			var hand = handEvaluator.evaluateHand(twoPairsNoFlush);
+			var hand = handEvaluator.evaluateHand(twoPairsNoFlushKingKicker);
 			expect(hand.rank).toEqual(handEvaluator.Hand.Rank.TwoPair);
             expect(hand.cards[0].rank).toEqual(handEvaluator.Card.Rank.Six);
             expect(hand.cards[1].rank).toEqual(handEvaluator.Card.Rank.Six);
             expect(hand.cards[2].rank).toEqual(handEvaluator.Card.Rank.Four);
             expect(hand.cards[3].rank).toEqual(handEvaluator.Card.Rank.Four);
-            expect(hand.cards[4].rank).toEqual(handEvaluator.Card.Rank.Ace);
+            expect(hand.cards[4].rank).toEqual(handEvaluator.Card.Rank.King);
         });
 
         it('should return a one pair with kickers for onePair', function() {
@@ -216,6 +245,27 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
             expect(hand.cards[2].rank).toEqual(handEvaluator.Card.Rank.Nine);
             expect(hand.cards[3].rank).toEqual(handEvaluator.Card.Rank.Six);
             expect(hand.cards[4].rank).toEqual(handEvaluator.Card.Rank.Four);
+        });
+
+	});
+
+	describe('Hand Comparisons:', function() {
+
+		it('AtoTnoFlush should beat Jto7noFlush', function() {
+			verifyHandOneBeatsHandTwo(AtoTnoFlush, Jto7noFlush);
+			verifyHandOneBeatsHandTwo(JackHighFlushHigher, JackHighFlush);
+			verifyHandOneBeatsHandTwo(JackHighFlush, wheelnoFlush);
+			verifyHandOneBeatsHandTwo(sixFlushKingwithLowerJackHighSF, sixFlushWithKingNoLowerSF);
+			verifyHandOneBeatsHandTwo(sixFlushWithKingNoLowerSF, tripsWithNineHighFlush);
+			verifyHandOneBeatsHandTwo(royalFlush, quads);
+			verifyHandOneBeatsHandTwo(twoPairsNoFlushAceKicker, twoPairsNoFlushKingKicker);
+			verifyHandOneBeatsHandTwo(minimumFullHouse, justTrips);
+			verifyHandOneBeatsHandTwo(tripsPlusTwoPair, minimumFullHouse);
+			verifyHandOneBeatsHandTwo(onePair, kingHigh);
+			verifyHandOneBeatsHandTwo(twoPairsNoFlushKingKicker, onePair);
+			verifyHandOneBeatsHandTwo(aceHigh, kingHigh);
+			verifyHandOneBeatsHandTwo(quads, onePair);
+			verifyHandOneBeatsHandTwo(justTrips, twoPairsNoFlushAceKicker);
         });
 
 	});
