@@ -6,15 +6,12 @@ define(['underscore'], function() {
 	};
 	Card.prototype = {
 		toString: function() {
-			return this.rank[1] + ' of ' + this.suit;
-		},
-		getRank: function() {
-			return this.rank[0];
+			return this.getRankName() + ' of ' + this.suit;
 		},
 		compare: function(that) {
-			if (this.getRank() < that.getRank()) {
+			if (this.rank < that.rank) {
 				return -1;
-			} else if (this.getRank() > that.getRank()) {
+			} else if (this.rank > that.rank) {
 				return 1
 			} else {
 				return 0;
@@ -23,22 +20,56 @@ define(['underscore'], function() {
 		convertFromString: function(string) {
 			return new Card(string.substring(0, 1), string.substring(1, 2));
 		},
+		getRankName: function() {
+			switch (this.rank) {
+				case Card.Rank.A: return 'Ace';
+				case Card.Rank.K: return 'King';
+				case Card.Rank.Q: return 'Queen';
+				case Card.Rank.J: return 'Jack';
+				case Card.Rank.T: return 'Ten';
+				case Card.Rank[9]: return 'Nine';
+				case Card.Rank[8]: return 'Eight';
+				case Card.Rank[7]: return 'Seven';
+				case Card.Rank[6]: return 'Six';
+				case Card.Rank[5]: return 'Five';
+				case Card.Rank[4]: return 'Four';
+				case Card.Rank[3]: return 'Three';
+				case Card.Rank[2]: return 'Two';
+				case Card.Rank.N: return 'Null';
+			}
+		}
 	};
 	Card.Rank = {
-		A: [14,'Ace'],
-		K: [13,'King'],
-		Q: [12,'Queen'],
-		J: [11,'Jack'],
-		T: [10,'Ten'],
-		9: [9,'Nine'],
-		8: [8,'Eight'],
-		7: [7,'Seven'],
-		6: [6,'Six'],
-		5: [5,'Five'],
-		4: [4,'Four'],
-		3: [3,'Three'],
-		2: [2,'Two'],
-		N: [0,'Null'],
+		// Used for shorthand, so we can quickly instantiate cards
+		A: 14,
+		K: 13,
+		Q: 12,
+		J: 11,
+		T: 10,
+		9: 9,
+		8: 8,
+		7: 7,
+		6: 6,
+		5: 5,
+		4: 4,
+		3: 3,
+		2: 2,
+		N: 0,
+		// Used for clarity
+		Ace: 14,
+		King: 13,
+		Queen: 12,
+		Jack: 11,
+		Ten: 10,
+		Nine: 9,
+		Eight: 8,
+		Seven: 7,
+		Six: 6,
+		Five: 5,
+		Four: 4,
+		Three: 3,
+		Two: 2,
+		Null: 0,
 	};
 	Card.Suit = {
 		S: 'Spades',
@@ -83,7 +114,7 @@ define(['underscore'], function() {
 				if (c != 0) { 
 					ranks += ','; 
 				}
-				ranks += this.cards[c].rank[1];
+				ranks += this.cards[c].rank;
 			}
 			ranks += ')';
 			return ranks;
@@ -91,11 +122,15 @@ define(['underscore'], function() {
 		toString: function() {
 			switch (this.handRank) {
 				case Hand.Rank.StraightFlush:
-					return this.cards[0].rank[1] + ' high straight flush of ' + this.suit;
+					if (this.cards[0].rank == Card.Rank.Ace) {
+						return 'Royal flush of ' + this.suit + '. Damn.';
+					} else {
+						return this.cards[0].rank + ' high straight flush of ' + this.suit;
+					}
 				case Hand.Rank.Flush:
 					return 'Flush ' + this.listCardRanks() + ' of ' + this.suit;
 				case Hand.Rank.Straight:
-					return this.cards[0].rank[1] + ' high straight';
+					return this.cards[0].rank + ' high straight';
 			}
 		},
 	};
@@ -116,7 +151,7 @@ define(['underscore'], function() {
 		// Sorts card in rank order from highest to lowest
 		sortCards: function(cardSet) {
 			return _.sortBy(cardSet, function(c) { 
-				return c.getRank(); 
+				return c.rank; 
 			}).reverse();
 		},
 		findHand: function(cardSet) {
@@ -151,8 +186,8 @@ define(['underscore'], function() {
 		},
 		findHighestStraight: function(cardSet) {
 		    var straight = _.reduce(cardSet, function(sl, c) {
-		    	var lastRank = (sl.length == 0 ? 0 : sl[sl.length - 1].getRank());
-		    	var nextRank = c.getRank();
+		    	var lastRank = (sl.length == 0 ? 0 : sl[sl.length - 1].rank);
+		    	var nextRank = c.rank;
 		    	if (sl.length < 5 && lastRank != nextRank) {
 			    	if (lastRank - 1 == nextRank) {
 			    		sl.push(c);
@@ -164,13 +199,7 @@ define(['underscore'], function() {
 	    			return sl;
 	    		}
 		    }, []);
-		    console.log('straight?: ' + straight); 
-		    console.log('straight.length: ' + straight.length);
-		    console.log('straight[0]: ' + straight[0]);
-		    console.log('Card.Rank[5]: ' + Card.Rank[5]);
-		    console.log('cardSet[0]: ' + cardSet[0].rank);
-		    console.log('Card.Rank.A: ' + Card.Rank.A); 
-		    if (straight.length >= 5 || ((straight.length == 4) && (straight[0].rank == Card.Rank[5]) && (cardSet[0].rank == Card.Rank.A))) {
+		    if (straight.length >= 5 || ((straight.length == 4) && (straight[0].rank == Card.Rank.Five) && (cardSet[0].rank == Card.Rank.Ace))) {
 		    	console.log('straight!: ' + straight);
 		    	var hand = new Hand(Hand.Rank.Straight, straight);
 		        return hand;
@@ -246,7 +275,7 @@ define(['underscore'], function() {
 		},
 		findHighCards: function(cardSet, ignoreRanks) {
 			return _.chain(cardSet)
-		        .map(function(card) { return card.getRank(); }) // { rank }
+		        .map(function(card) { return card.rank; }) // { rank }
 		        .filter(function(rank) { return !_.contains(ignoreRanks, rank); } )
 				.sortBy(function(rank) { return rank; } ) // { rank } order by asc
 				.reverse() // { rank } order by desc
@@ -254,7 +283,7 @@ define(['underscore'], function() {
 		},
 		getOrderedCardsByCount: function(cardSet, count) {
 			return _.chain(cardSet)
-		        .groupBy(function(card) { return card.getRank(); } ) // { rank, [cards] }
+		        .groupBy(function(card) { return card.rank; } ) // { rank, [cards] }
 		        .filter(function(cards) { return cards.length == count; } ) // { rank, [cards].length == count }
 		        .map(function(cards, rank) { return rank; }) // { rank }
 				.sortBy(function(rank) { return rank; } ) // { rank } order by asc
