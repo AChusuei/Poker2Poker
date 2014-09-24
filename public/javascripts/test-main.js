@@ -19,6 +19,11 @@ require.config({
   // dynamically load all test files
   deps: allTestFiles,
 
+  paths: {
+    jquery: 'http://code.jquery.com/jquery-1.11.0.min',
+    peer: 'http://cdn.peerjs.com/0.3/peer.min',
+  },
+
   // we have to kickoff jasmine, as it is asynchronous
   callback: window.__karma__.start
 });

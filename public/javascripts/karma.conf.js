@@ -23,7 +23,7 @@ module.exports = function(config) {
 
     // list of files to exclude
     exclude: [
-      'main.js', 'test/pokerSpec.js'
+      'main.js'
     ],
 
 

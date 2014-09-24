@@ -23,6 +23,8 @@ define(['poker', 'moment'], function(poker, moment) {
         }
     }
 
+    /*
+
     describe('A Table', function() {
 
         beforeEach(function() {
@@ -579,6 +581,8 @@ define(['poker', 'moment'], function(poker, moment) {
         });
     });
 
+    */
+
     describe('A Player', function() {
 
         var name = 'alan';
@@ -586,7 +590,7 @@ define(['poker', 'moment'], function(poker, moment) {
         var smallBet = 50;
 
         beforeEach(function() {
-            this.player = poker.createPlayer(name, startingStack);
+            this.player = poker.createLocalPlayer(name, startingStack);
         });
 
         it('should be initialized properly', function() {
