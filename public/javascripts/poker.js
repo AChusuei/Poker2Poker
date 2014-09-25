@@ -85,10 +85,8 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				// Player after small blind posts big blind.
 				var bbPlayer = this.nextLivePlayer();
 			}
-			var sbBet = sbPlayer.postBlind(this.blinds.smallBlind);
-			currentPot.build(sbBet, sbPlayer);
-			var bbBet = bbPlayer.postBlind(this.blinds.bigBlind);
-			currentPot.build(bbBet, bbPlayer);
+			var sbBet = sbPlayer.postBlind(this.blinds.smallBlind, currentPot);
+			var bbBet = bbPlayer.postBlind(this.blinds.bigBlind, currentPot);
 		},
 		// One whole game. Winner is the last one standing.
 		startTournamentGame: function(players, levels, startingStack) {
@@ -204,10 +202,10 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			switch (response.action) {
 				case Player.Action.CHECK: player.check(); break;
 				case Player.Action.FOLD: player.fold(); break;
-				case Player.Action.BET: pot.build(player.bet(amount), player); break;
-				case Player.Action.CALL: pot.build(player.call(amount), player); break;
-				case Player.Action.RAISE: pot.build(player.raise(amount), player); break;
-				case Player.Action.ALLIN: pot.build(player.allIn(), player); break;
+				case Player.Action.BET: player.bet(amount, pot); break;
+				case Player.Action.CALL: player.call(amount, pot); break;
+				case Player.Action.RAISE: player.raise(amount, pot); break;
+				case Player.Action.ALLIN: player.allIn(pot); break;
 				default: 
 					console.log('what action is this?' + response.action); 
 					throw 'Don\'t recognize this action!';
@@ -239,12 +237,15 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				return player.action != Player.Action.FOLD;
 		    });
 		},
-		getPlayerBetStatus: function() {
+		getStatus: function() {
 			var button = this.button;
 			console.log('Player Status ... ');
+			console.log('player(seat)/stack/liveBet/action');
 			_.each(this.players, function(player) {			     
-				console.log('player(seat)/stack/bet/action:' + player.name + '(' + player.seat + (player.seat == button ? 'B' : '') + ')/' + player.stack + '/' + player.liveBet + '/' + player.action);
+				console.log(player.name + '(' + player.seat + (player.seat == button ? 'B' : '') + ')/' + player.stack + '/' + player.liveBet + '/' + player.action);
 		    }, this);
+		    console.log('Last action done by seat ' + this.currentPlayer);
+		    console.log('------------------------------------');
 		},
 		// Given a closed street of betting, resolve any side pots that have occurred from all-ins.
 		resolvePots: function() {
@@ -260,16 +261,16 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				var lowestAllInBet = _.min(nonFoldedAllInPlayers, function(player) {
 			    	return player.liveBet; 
 			    }).liveBet;
-			    for (p = 0; p < nonFoldedPlayers; p++) {
-			    	var skim = nonFoldedPlayers[p].liveBet - lowestAllInBet;
+			    _.each(nonFoldedPlayers, function(nonFoldedPlayer) {
+			    	var skim = nonFoldedPlayer.liveBet - lowestAllInBet;
 			    	if (skim > 0) {
 			    		currentPot.amount -= skim;
-			    		sidePot.build(skim, nonFoldedPlayers[p]);
+			    		sidePot.build(skim, nonFoldedPlayer);
 			    	}
-			    	nonFoldedPlayers[p].liveBet -= lowestAllInBet;
-			    }
+			    	nonFoldedPlayer.liveBet -= lowestAllInBet;
+			    });
 			    this.pots.push(sidePot);
-			    this.skimPots(); // we may need to skim another pot.
+			    this.resolvePots(); // we may need to skim another pot.
 			} else {
 				// clear all live bets for this street
 			    _.each(this.players, function(player) {
@@ -280,6 +281,9 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		resolvePotWinners: function() {
 			while (this.pots.length > 0) {
 				var currentPot = this.pots.pop();
+				if (currentPot.amount === 0) {
+					continue;
+				}; 
 				// If we have split pots, then everyone in this list has to be a winner
 				var currentWinners = [];
 				var highHand; 
@@ -366,6 +370,9 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
     		this.amount += bet;
     		this.makeEligible(player); 
     	},
+    	isAnyoneEligible: function() {
+    		return (_.keys(this.players).length !== 0);
+    	},
     	makeEligible: function(player) {
     		this.players[player.name] = player; 
     	},
@@ -434,54 +441,58 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		},
 		// Pulls an absolute amount from a player's stack.
 		// A player is all in when they bet everything in their stack.
-		absoluteBet: function(bet, action, isNotLiveBet) {
+		absoluteBet: function(bet, action, pot, isNotLiveBet) {
 			if (bet >= this.stack) {
-				return this.allIn();
-			}
-			this.stack -= bet;
-			if (!isNotLiveBet) {
-				this.liveBet += bet;				
-			}
-			if (action) {
-				this.action = action;
+				bet = this.allIn();
+			} else {
+				this.stack -= bet;
+				if (!isNotLiveBet) {
+					this.liveBet += bet;				
+				}
+				if (action) {
+					this.action = action;
+				}
+			} 
+			if (pot) { 
+				pot.build(bet, this);
 			}
 			return bet;
 		},
 		// Calculates the relative amount to remove from a player's stack based on a total amount to match.
 		// A player is all in when they bet everything in their stack.
-		relativeBet: function(totalBet, action) {
-			return this.absoluteBet(totalBet - this.liveBet, action);
+		relativeBet: function(totalBet, action, pot) {
+			return this.absoluteBet(totalBet - this.liveBet, action, pot);
 		},
 		// Pulls an ante for a player.
 		// For specificity, returns the ante removed from the player's stack.
 		// Also, note that antes do not count towards a player's live bet (not the same as a blind)
-		ante: function(ante) {
-			return this.absoluteBet(ante, Player.Action.POSTANTE, true);
+		ante: function(ante, pot) {
+			return this.absoluteBet(ante, Player.Action.POSTANTE, pot, true);
 		},
 		// Player is posting a blind. Note this is synonymous to a bet with respect to stack.
 		// If you are blinding off the rest of your chips, you are all in.
 		// Otherwise, note that this records the person as having posted a blind.
-		postBlind: function(blind) {
-			return this.absoluteBet(blind, Player.Action.POSTBLIND);
+		postBlind: function(blind, pot) {
+			return this.absoluteBet(blind, Player.Action.POSTBLIND, pot);
 		},
 		// Player is bettting or raising.
 		// If you are betting the rest of your chips, you are all in.
 		// For specificity, returns the amount removed from the player's stack.
-		bet: function(bet) {
-			return this.absoluteBet(bet, Player.Action.BET);
+		bet: function(bet, pot) {
+			return this.absoluteBet(bet, Player.Action.BET, pot);
 		},
 		// Player calls to match a current bet.
 		// Returns the amount removed from the player's stack in order to make the call.
-		call: function(totalBet) {
-			return this.relativeBet(totalBet, Player.Action.CALL);
+		call: function(totalBet, pot) {
+			return this.relativeBet(totalBet, Player.Action.CALL, pot);
 		},
 		// Player raises to certain amount, monetarily equivalent to making a call
 		// Returns the amount removed from the player's stack in order to make the raise.
-		raise: function(totalBet) {
-			return this.relativeBet(totalBet, Player.Action.RAISE);
+		raise: function(totalBet, pot) {
+			return this.relativeBet(totalBet, Player.Action.RAISE, pot);
 		},
 		// Player bets the remainder of their chips.
-		allIn: function() {
+		allIn: function(pot) {
 			var rest = this.stack;
 			this.liveBet += rest;
 			this.stack = 0;
