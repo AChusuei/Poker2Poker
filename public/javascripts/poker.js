@@ -67,11 +67,12 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		},
 		// Note that this sets the table such that the next live player should be UTG
 		postBlindsAndAntes: function() {
-			var pot = this.startPot();
+			this.pots = [this.startPot()];
+			var currentPot = this.pots[0]; 
 			// get antes from every player.
 			// TODO: find minimum ante.
 			_.each(this.players, function(player) {
-				pot.amount += player.ante(this.blinds.ante);
+				currentPot.amount += player.ante(this.blinds.ante);
 			}, this);
 			if (this.players.length == 2) { // We are heads up; 
 				// Button posts small blind.
@@ -85,10 +86,9 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				var bbPlayer = this.nextLivePlayer();
 			}
 			var sbBet = sbPlayer.postBlind(this.blinds.smallBlind);
-			pot.build(sbBet, sbPlayer);
+			currentPot.build(sbBet, sbPlayer);
 			var bbBet = bbPlayer.postBlind(this.blinds.bigBlind);
-			pot.build(bbBet, bbPlayer);
-			return pot;
+			currentPot.build(bbBet, bbPlayer);
 		},
 		// One whole game. Winner is the last one standing.
 		startTournamentGame: function(players, levels, startingStack) {
@@ -104,7 +104,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			// Set up main pot.
 			this.table.blinds = blindStructure.getBlindLevel();
 			this.dealCards();
-			this.pots = [ this.postBlindsAndAntes() ]; // todo: antes might be low, might req side pot ... 
+			this.postBlindsAndAntes(); // todo: antes might be low, might req side pot ... 
 			this.street = this.Street.PREFLOP;
 			this.startStreet();
 		},
@@ -364,6 +364,9 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
     Pot.prototype = {
     	build: function(bet, player) {
     		this.amount += bet;
+    		this.makeEligible(player); 
+    	},
+    	makeEligible: function(player) {
     		this.players[player.name] = player; 
     	},
     	isEligible: function(player) {

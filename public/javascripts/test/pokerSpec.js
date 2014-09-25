@@ -23,6 +23,13 @@ define(['poker', 'moment'], function(poker, moment) {
         }
     }
 
+    function expectContainsAll(expected, actual) {
+        expect(actual.length).toEqual(expected.length);
+        _.each(actual.actions, function(item) {                
+            expect(_.contains(expected, item)).toBeTruthy();
+        });
+    }
+
     describe('A Table', function() {
 
         beforeEach(function() {
@@ -110,12 +117,12 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should have an initial pot equal equal to (# of players * ante + big blind + small blind) after posting blinds and antes', function() {
             var blindLevel = this.table.blinds;
             var pot = this.table.postBlindsAndAntes();
-            expect(pot.amount).toEqual((this.table.getNumberOfPlayers() * blindLevel.ante) + blindLevel.smallBlind + blindLevel.bigBlind);
+            expect(this.table.getCurrentPot().amount).toEqual((this.table.getNumberOfPlayers() * blindLevel.ante) + blindLevel.smallBlind + blindLevel.bigBlind);
         });
 
         it('should only post blinds and antes from the correct positions (after the button)', function() {
             var blindLevel = this.table.blinds;
-            var pot = this.table.postBlindsAndAntes();
+            this.table.postBlindsAndAntes();
             // reset current player cursor to make it easier to find the players after the button
             this.table.currentPlayer = this.table.button; 
             var sbPlayer = this.table.nextLivePlayer();
@@ -124,8 +131,8 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(sbPlayer.liveBet).toEqual(blindLevel.smallBlind);
             expect(bbPlayer.stack).toEqual(startingStack - blindLevel.bigBlind - blindLevel.ante);
             expect(bbPlayer.liveBet).toEqual(blindLevel.bigBlind);
-            expect(pot.isEligible(sbPlayer)).toBeTruthy();
-            expect(pot.isEligible(bbPlayer)).toBeTruthy();
+            expect(this.table.getCurrentPot().isEligible(sbPlayer)).toBeTruthy();
+            expect(this.table.getCurrentPot().isEligible(bbPlayer)).toBeTruthy();
 
             // Check rest of table for antes withdrawal
             while (this.table.nextLivePlayer().seat != this.table.button) {
@@ -261,11 +268,16 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should end a street when all players have folded to a donk bet', function() {
-            this.table.nextLivePlayer().bet(45);
+            this.table.pots = [this.table.startPot()];
+            this.table.getCurrentPot().amount = 100;
+            var player = this.table.nextLivePlayer();
+            this.table.getCurrentPot().build(player.bet(45), player);
             do {
                 this.table.nextLivePlayer().fold();
             } while (this.table.currentPlayer != this.table.button);
             expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            expect(this.table.getCurrentPot().amount).toEqual(145);
         });
 
         it('should not end a street when all players have not folded to a donk bet', function() {
@@ -374,13 +386,6 @@ define(['poker', 'moment'], function(poker, moment) {
             button.allIn();
             expect(this.table.isStreetOver()).toBeFalsy();
         });
-
-        function expectContainsAll(expected, actual) {
-            expect(actual.length).toEqual(expected.length);
-            _.each(actual.actions, function(item) {                
-                expect(_.contains(expected, item)).toBeTruthy();
-            });
-        }
 
         it('should formulate base action options when no one has acted yet and small blind has ten big blinds in stack', function() {
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
