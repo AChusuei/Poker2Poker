@@ -23,6 +23,8 @@ define(['poker', 'moment'], function(poker, moment) {
         }
     }
 
+    var s = jasmine.createSpyObj('s', ['x', 'y', 'z']);
+
     function expectContainsAll(expected, actual) {
         expect(actual.length).toEqual(expected.length);
         _.each(actual.actions, function(item) {                
@@ -63,8 +65,8 @@ define(['poker', 'moment'], function(poker, moment) {
 
         it('should choose the player after the button when choosing the next player for the first time', function() {
             var nextPlayer = this.table.nextLivePlayer();
-            expect((nextPlayer.seat == this.table.button + 1) || // button not on last player
-                (nextPlayer.seat == 0 && this.table.button == this.table.getNumberOfPlayers() - 1)).toBeTruthy();  // button on last player
+            expect((nextPlayer.seat === this.table.button + 1) || // button not on last player
+                (nextPlayer.seat === 0 && this.table.button === this.table.getNumberOfPlayers() - 1)).toBeTruthy();  // button on last player
         });
 
         it('should go only with players who actually have chips', function() {
@@ -106,7 +108,7 @@ define(['poker', 'moment'], function(poker, moment) {
             this.table.players[4].stack = 0;
             this.table.dealCards();
             _.each(this.table.players, function(player, i) {
-                if (player.stack == 0) {
+                if (player.stack === 0) {
                     expect(player.hand.length).toEqual(0);
                 } else {
                     expect(player.hand.length).toEqual(2);    
@@ -135,7 +137,7 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(this.table.getCurrentPot().isEligible(bbPlayer)).toBeTruthy();
 
             // Check rest of table for antes withdrawal
-            while (this.table.nextLivePlayer().seat != this.table.button) {
+            while (this.table.nextLivePlayer().seat !== this.table.button) {
                 var nonBlindPlayer = this.table.players[this.table.currentPlayer];
                 expect(nonBlindPlayer.stack).toEqual(startingStack - blindLevel.ante);
             } 
@@ -177,7 +179,7 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should move the button to the next player', function() {
             var originalButton = this.table.button;
             this.table.moveButton();
-            if (originalButton == this.table.getNumberOfPlayers() - 1) {
+            if (originalButton === this.table.getNumberOfPlayers() - 1) {
                 expect(this.table.button).toEqual(0);
             } else {
                 expect(this.table.button).toEqual(originalButton+ 1);
@@ -209,7 +211,7 @@ define(['poker', 'moment'], function(poker, moment) {
             this.table.postBlindsAndAntes();
             do { // get all non-blind players to fold.
                 this.table.nextLivePlayer().fold();   
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             // small blind still left to Act
             expect(this.table.isStreetOver()).toBeFalsy();
         });
@@ -218,7 +220,7 @@ define(['poker', 'moment'], function(poker, moment) {
             this.table.postBlindsAndAntes(); 
             do { // get all non-blind players to fold.
                 this.table.nextLivePlayer().fold();   
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             // small blind folds ... 
             this.table.nextLivePlayer().fold();
             expect(this.table.isStreetOver()).toBeTruthy();
@@ -228,7 +230,7 @@ define(['poker', 'moment'], function(poker, moment) {
             this.table.postBlindsAndAntes(); 
             do { // get all non-blind players to fold.
                 this.table.nextLivePlayer().fold();   
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             // small blind calls big blind ... 
             this.table.nextLivePlayer().call(this.table.blinds.bigBlind);
             expect(this.table.isStreetOver()).toBeFalsy();
@@ -263,7 +265,7 @@ define(['poker', 'moment'], function(poker, moment) {
                 } else {
                     this.table.nextLivePlayer().check();
                 }
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             expect(this.table.isStreetOver()).toBeTruthy();
         });
 
@@ -274,7 +276,7 @@ define(['poker', 'moment'], function(poker, moment) {
             player.bet(45, this.table.getCurrentPot());
             do {
                 this.table.nextLivePlayer().fold();
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             expect(this.table.isStreetOver()).toBeTruthy();
             this.table.resolvePots();
             expect(this.table.getCurrentPot().amount).toEqual(145);

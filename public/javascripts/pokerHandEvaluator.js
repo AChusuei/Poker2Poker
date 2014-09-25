@@ -96,10 +96,10 @@ define(['underscore'], function() {
 	};
 	Hand.prototype = {
 		compare: function(that) {
-			if (this.rank == that.rank) {
+			if (this.rank === that.rank) {
 				for (c = 0; c < this.cards.length; c++) {
 					var diff = this.cards[c].compare(that.cards[c]);
-					if (diff != 0) {
+					if (diff !== 0) {
 						return diff;
 					}
 				}
@@ -111,7 +111,7 @@ define(['underscore'], function() {
 		listCardRanks: function() {
 			var ranks = '(';
 			for (var c = 0; c < this.cards.length; c++) {
-				if (c != 0) { 
+				if (c !== 0) { 
 					ranks += ','; 
 				}
 				ranks += this.cards[c].rank;
@@ -122,7 +122,7 @@ define(['underscore'], function() {
 		toString: function() {
 			switch (this.rank) {
 				case Hand.Rank.StraightFlush:
-					if (this.cards[0].rank == Card.Rank.Ace) {
+					if (this.cards[0].rank === Card.Rank.Ace) {
 						return 'Royal flush of ' + this.suit + '. Damn.';
 					} else {
 						return this.cards[0].rank + ' high straight flush of ' + this.suit;
@@ -182,10 +182,10 @@ define(['underscore'], function() {
 		},
 		findHighestStraight: function(cardSet) {
 		    var straight = _.reduce(cardSet, function(sl, c) {
-		    	var lastRank = (sl.length == 0 ? 0 : sl[sl.length - 1].rank);
+		    	var lastRank = (sl.length === 0 ? 0 : sl[sl.length - 1].rank);
 		    	var nextRank = c.rank;
-		    	if (sl.length < 5 && lastRank != nextRank) {
-			    	if (lastRank - 1 == nextRank) {
+		    	if (sl.length < 5 && lastRank !== nextRank) {
+			    	if (lastRank - 1 === nextRank) {
 			    		sl.push(c);
 			    		return sl; 
 			    	} else {
@@ -197,7 +197,7 @@ define(['underscore'], function() {
 		    }, []);
 		    if (straight.length >= 5) {
 		    	return new Hand(Hand.Rank.Straight, straight);
-		    } else if ((straight.length == 4) && (straight[0].rank == Card.Rank.Five) && (cardSet[0].rank == Card.Rank.Ace)) {
+		    } else if ((straight.length === 4) && (straight[0].rank === Card.Rank.Five) && (cardSet[0].rank === Card.Rank.Ace)) {
 		        return new Hand(Hand.Rank.Straight, straight.concat(cardSet[0]));
 		    } else {
 		    	return;
@@ -232,9 +232,9 @@ define(['underscore'], function() {
 		},
 		findTripsOrFullHouse: function(cardSet) {
 			var trips = this.getOrderedCardsByCount(cardSet, 3);
-			if (trips.length == 2) {
+			if (trips.length === 2) {
 				return new Hand(Hand.Rank.FullHouse, trips[0].concat(trips[1].slice(0, 2)));
-			} else if (trips.length == 1) {
+			} else if (trips.length === 1) {
 				var pairs = this.getOrderedCardsByCount(cardSet, 2);
 				if (pairs.length > 0) {
 					return new Hand(Hand.Rank.FullHouse, trips[0].concat(pairs[0]));
@@ -252,7 +252,7 @@ define(['underscore'], function() {
 				var twoPairs = pairs[0].concat(pairs[1]);
 				var highCards = this.findHighCards(cardSet, twoPairs);
 				return new Hand(Hand.Rank.TwoPair, twoPairs.concat(highCards[0]));
-			} else if (pairs.length == 1) { // two pair
+			} else if (pairs.length === 1) { // two pair
 				var highCards = this.findHighCards(cardSet, pairs[0]);
 				return new Hand(Hand.Rank.OnePair, pairs[0].concat(highCards.slice(0, 3)));
 			} else {
@@ -271,7 +271,7 @@ define(['underscore'], function() {
 			var cards = _.chain(cardSet)
 		        .groupBy(function(card) { return card.rank; } ) // { rank, [cards] }
 		        .pairs() // [ 'rank', [cards] ], **rank is no longer a number**
-		        .filter(function(rankCardsPair) { return rankCardsPair[1].length == count; } )// { rank, [cards].length == count }
+		        .filter(function(rankCardsPair) { return rankCardsPair[1].length === count; } )// { rank, [cards].length == count }
 		        .map(function(rankCardsPair) { return rankCardsPair[1]; }) // [ [cards] ]
 				.sortBy(function(cards) { return cards[0].rank; } ) // [ [ cards ] ] order asc
 				.reverse() // [ [ cards ] ] order desc

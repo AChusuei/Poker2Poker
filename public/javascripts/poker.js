@@ -37,13 +37,13 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		},
 		nextLivePlayer: function() {
 			do {
-				if (this.currentPlayer == this.players.length - 1) {
+				if (this.currentPlayer === this.players.length - 1) {
 					this.currentPlayer = 0;
 				} else {
 					this.currentPlayer += 1;
 				}
-			} while (this.currentLivePlayer().stack == 0 || 
-				     this.currentLivePlayer().action == Player.Action.FOLD);
+			} while (this.currentLivePlayer().stack === 0 || 
+				     this.currentLivePlayer().action === Player.Action.FOLD);
 			return this.currentLivePlayer();
 		},
 		currentLivePlayer: function() {
@@ -74,7 +74,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			_.each(this.players, function(player) {
 				currentPot.amount += player.ante(this.blinds.ante);
 			}, this);
-			if (this.players.length == 2) { // We are heads up; 
+			if (this.players.length === 2) { // We are heads up; 
 				// Button posts small blind.
 				var sbPlayer = this.players[this.button];
 				// Non-button player posts big blind.
@@ -130,7 +130,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			var minimumBet = this.blinds.bigBlind;
 			// The current bet required by all players who wish to stay in the hand.
 			var callBet = _.chain(this.players)
-			    .filter(function(p) { return p.action != Player.Action.FOLD; } )
+			    .filter(function(p) { return p.action !== Player.Action.FOLD; } )
 				.max(function(p) { return p.liveBet; }, this)
 				.value().liveBet;
 			// Calculates the minimum marginal additional amount needed for a raise.
@@ -138,12 +138,12 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			    .filter(function(p) { return p.action != Player.Action.FOLD && p.liveBet < callBet; } )
 				.max(function(p) { return p.liveBet; }, this)
 				.value().liveBet;
-			var minimumRaiseDelta = (callBet == 0 ? minimumBet : callBet - maxNonCallBet);
+			var minimumRaiseDelta = (callBet === 0 ? minimumBet : callBet - maxNonCallBet);
 			// console.log('CB/MRD:' + callBet + '/' + minimumRaiseDelta);
 			// The absolute value of the minimum raise.
 			var minimumRaise = Math.min(callBet + minimumRaiseDelta, player.liveBet + player.stack);
 			var actions = [Player.Action.FOLD, Player.Action.ALLIN];
-			if (callBet == 0) {
+			if (callBet === 0) {
 				actions.push(Player.Action.CHECK, Player.Action.BET);
 			} else if ((player.stack + player.liveBet) > callBet) {
 				actions.push(Player.Action.CALL);
@@ -219,22 +219,22 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		    }).liveBet;
 		    var onlyOnePlayerLeft = (nonFoldedPlayers.length == 1);
 			var restChecked = _.every(nonFoldedPlayers, function(player) { 
-				return player.action == Player.Action.CHECK; 
+				return player.action === Player.Action.CHECK; 
 		    }, this);
 		    var madeWager = function(player) {
-		    	return player.action == Player.Action.BET || 
-		    		   player.action == Player.Action.CALL ||
-		    	       player.action == Player.Action.RAISE;
+		    	return player.action === Player.Action.BET || 
+		    		   player.action === Player.Action.CALL ||
+		    	       player.action === Player.Action.RAISE;
 		    }
 			var restCalledTheHighBetOrAllIn = _.every(nonFoldedPlayers, function(player) { 
-				return (madeWager(player) && player.liveBet == highBet) ||
-				       (player.action == Player.Action.ALLIN && player.liveBet <= highBet)
+				return (madeWager(player) && player.liveBet === highBet) ||
+				       (player.action === Player.Action.ALLIN && player.liveBet <= highBet)
 		    }, this);
 			return onlyOnePlayerLeft || restChecked || restCalledTheHighBetOrAllIn;
 		},
 		nonFoldedPlayers: function() {
 			return _.filter(this.players, function(player) { 
-				return player.action != Player.Action.FOLD;
+				return player.action !== Player.Action.FOLD;
 		    });
 		},
 		getStatus: function() {
@@ -253,7 +253,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			// Only create side pots if we have all in players with liveBets still in play.
 			// Note that the liveBet is what we decrement to ensure that a player is as eligile for as many pots as possible.
 			var nonFoldedAllInPlayers = _.filter(nonFoldedPlayers, function(player) { 
-				return player.action == Player.Action.ALLIN && player.liveBet > 0;
+				return player.action === Player.Action.ALLIN && player.liveBet > 0;
 		    });
 		    if (nonFoldedAllInPlayers.length > 0) {
 				var currentPot = this.getCurrentPot();
@@ -292,7 +292,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 						var seven = this.communityCards.concat(player.hand);
 						var currentHand = this.handEvaluator.evaluateHand(seven);
 						var diff = currentHand.compare(highHand);
-						if (diff == 0) {
+						if (diff === 0) {
 							currentWinners.push(player);
 						} else if (diff > 0) {
 							currentWinners = [player];
@@ -310,8 +310,8 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			}
 		},
 		getRoundWinner: function() {
-			var survivors = _.filter(this.players, function(p) { return p.status == PlayerRoundStatus.IN; } );
-			return (survivors.length == 1 ? survivors[0] : null);
+			var survivors = _.filter(this.players, function(p) { return p.status === PlayerRoundStatus.IN; } );
+			return (survivors.length === 1 ? survivors[0] : null);
 		},
 		fakePlayRound: function() {
 			// Take random amount from each player. 
@@ -326,7 +326,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			this.currentPlayer = button; // reset first player to act.
 		},
 		moveButton: function() {
-			if (this.button == this.players.length - 1) {
+			if (this.button === this.players.length - 1) {
 				this.button = 0;
 			} else {
 				this.button += 1;
@@ -336,7 +336,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		findGameWinner: function() {
 			// Someone should have chips remaining, otherwise something REALLY REALLY wrong happened here.
 			var remainingPlayers = _.filter(this.players, function(p) { return p.stack > 0; } );
-			if (remainingPlayers.length == 1) {
+			if (remainingPlayers.length === 1) {
 				return remainingPlayers[0];
 			} else {
 				return null;
@@ -392,7 +392,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 	};
 	BlindStructure.prototype = {
 		getBlindLevel: function() {
-			if (this.currentLevel == -1 || moment().diff(this.lastTimeBlindsWentUp, 'minutes') > this.levels[this.currentLevel].min) {
+			if (this.currentLevel === -1 || moment().diff(this.lastTimeBlindsWentUp, 'minutes') > this.levels[this.currentLevel].min) {
 				this.currentLevel += 1;
 				this.lastTimeBlindsWentUp = moment();
 			}

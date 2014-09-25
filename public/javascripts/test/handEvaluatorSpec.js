@@ -56,10 +56,10 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
 	var aceHigh = getSeven('3S,6S,2D,QS,AD,4C,9H');
 	
 	var verifyStraight = function(hand, highCard) {
-		expect(hand.rank == handEvaluator.Hand.Rank.Straight || 
-			   hand.rank == handEvaluator.Hand.Rank.StraightFlush).toBeTruthy();
+		expect(hand.rank === handEvaluator.Hand.Rank.Straight || 
+			   hand.rank === handEvaluator.Hand.Rank.StraightFlush).toBeTruthy();
 		for (c = 0; c < 5; c++) {
-			if (c == 4 && highCard == handEvaluator.Card.Rank.Five) {
+			if (c === 4 && highCard === handEvaluator.Card.Rank.Five) {
 				// wheel check bottom card for Ace
 				expect(hand.cards[c].rank).toEqual(handEvaluator.Card.Rank.Ace);
 			} else {
@@ -69,8 +69,8 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
 	};
 
 	var verifyFlush = function(hand) {
-		expect(hand.rank == handEvaluator.Hand.Rank.Flush || 
-			   hand.rank == handEvaluator.Hand.Rank.StraightFlush).toBeTruthy();
+		expect(hand.rank === handEvaluator.Hand.Rank.Flush || 
+			   hand.rank === handEvaluator.Hand.Rank.StraightFlush).toBeTruthy();
 		var suit = hand.cards[0].suit;
 		for (c = 0; c < 5; c++) {
 			expect(hand.cards[c].suit).toEqual(suit);
