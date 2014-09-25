@@ -23,15 +23,13 @@ define(['poker', 'moment'], function(poker, moment) {
         }
     }
 
-    /*
-
     describe('A Table', function() {
 
         beforeEach(function() {
             this.poker = poker;
             var newPlayers = [];
             _.each(allPlayers, function(p) {
-                newPlayers.push(poker.createPlayer(p.name, startingStack));
+                newPlayers.push(poker.createLocalPlayer(p.name, startingStack));
             });
             this.table = poker.createTable(newPlayers);
             var blindStructure = poker.createBlindStructure(startingStack, levels);
@@ -89,7 +87,7 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should deal two cards to every player when everyone has chips in their stack', function() {
-            this.table.dealCardsAndSetRoundStatus();
+            this.table.dealCards();
             _.each(this.table.players, function(player) {
                 // console.info('player:' + p.name + ' | cards:' + p.hand);
                 expect(player.hand.length).toEqual(2);
@@ -99,7 +97,7 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should deal cards only to players that have chips in their stack', function() {
             this.table.players[2].stack = 0;
             this.table.players[4].stack = 0;
-            this.table.dealCardsAndSetRoundStatus();
+            this.table.dealCards();
             _.each(this.table.players, function(player, i) {
                 if (player.stack == 0) {
                     expect(player.hand.length).toEqual(0);
@@ -153,7 +151,7 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should make the button the small blind when it is heads up (two players)', function() {
             var newPlayers = [];
             _.each(_.sample(allPlayers, 2), function(p) {
-                newPlayers.push(poker.createPlayer(p.name, startingStack));
+                newPlayers.push(poker.createLocalPlayer(p.name, startingStack));
             });
             this.table = poker.createTable(newPlayers);
             var blindStructure = poker.createBlindStructure(startingStack, levels);
@@ -500,8 +498,8 @@ define(['poker', 'moment'], function(poker, moment) {
     describe('A Pot', function() {
 
         beforeEach(function() {
-            this.boy = poker.createPlayer('Alan', 3000);
-            this.girl = poker.createPlayer('Christina', 5000);
+            this.boy = poker.createLocalPlayer('Alan', 3000);
+            this.girl = poker.createLocalPlayer('Christina', 5000);
             this.pot = poker.createPot();
         });        
 
@@ -580,8 +578,6 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(this.blindStructure.lastTimeBlindsWentUp).toEqual(lastChangeTime);
         });
     });
-
-    */
 
     describe('A Player', function() {
 

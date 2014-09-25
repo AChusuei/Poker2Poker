@@ -232,7 +232,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				return (madeWager(player) && player.liveBet == highBet) ||
 				       (player.action == Player.Action.ALLIN && player.liveBet <= highBet)
 		    }, this);
-			return onlyOnePlayerLeft() || restChecked || restCalledTheHighBetOrAllIn;
+			return onlyOnePlayerLeft || restChecked || restCalledTheHighBetOrAllIn;
 		},
 		nonFoldedPlayers: function() {
 			return _.filter(this.players, function(player) { 
