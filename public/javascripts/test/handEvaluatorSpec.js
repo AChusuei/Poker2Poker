@@ -83,8 +83,6 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
 		verifyFlush(hand);
 	}
 
-
-
 	describe('A Hand Evaluator', function() {
 
 		it('should return an Ace high straight for AtoTnoFlush', function() {
@@ -337,7 +335,5 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
         });
 
     });
-
-	 
 
 });

@@ -171,6 +171,12 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 					break;
 			}
 		},
+		qa_dealAllCommunityCards: function() {
+			this.communityCards = [];
+			for (c = 0; c < 5; c++) {
+				this.communityCards.push(this.deck.draw());
+			}
+		},
 		resolvePlayerAction: function(response) {
 			this.changePlayerState(response);
 			if (!this.isStreetOver()) {
@@ -279,30 +285,34 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			}
 		},
 		resolvePotWinners: function() {
+			var currentWinners = [];
+			var losers = [];
 			while (this.pots.length > 0) {
 				var currentPot = this.pots.pop();
 				if (currentPot.amount === 0) {
 					continue;
 				}; 
 				// If we have split pots, then everyone in this list has to be a winner
-				var currentWinners = [];
 				var highHand; 
-				_.each(currentPot.players, function (player) {
-					if (currentWinners.length > 0) {
-						var seven = this.communityCards.concat(player.hand);
-						var currentHand = this.handEvaluator.evaluateHand(seven);
-						var diff = currentHand.compare(highHand);
-						if (diff === 0) {
+				_.chain(currentPot.players)
+					.difference(losers) // any players who've already lost will lose future pots
+					.each(function (player) {
+						if (currentWinners.length > 0) {
+							var seven = this.communityCards.concat(player.hand);
+							var currentHand = this.handEvaluator.evaluateHand(seven);
+							var diff = currentHand.compare(highHand);
+							if (diff === 0) {
+								currentWinners.push(player);
+							} else if (diff > 0) {
+								losers.concat(currentWinners);
+								currentWinners = [player];
+								highHand = currentHand;
+							}
+						} else {
+							highHand = this.handEvaluator.evaluateHand(player.hand, this.communityCards);
 							currentWinners.push(player);
-						} else if (diff > 0) {
-							currentWinners = [player];
-							highHand = currentHand;
 						}
-					} else {
-						highHand = this.handEvaluator.evaluateHand(player.hand, this.communityCards);
-						currentWinners.push(player);
-					}
-				}, this);
+					}, this);
 				var award = currentPot.amount / currentWinners.length;
 				_.each(currentWinners, function (winner) {
 					winner.stack += award;
@@ -443,16 +453,16 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		// A player is all in when they bet everything in their stack.
 		absoluteBet: function(bet, action, pot, isNotLiveBet) {
 			if (bet >= this.stack) {
-				bet = this.allIn();
-			} else {
-				this.stack -= bet;
-				if (!isNotLiveBet) {
-					this.liveBet += bet;				
-				}
-				if (action) {
-					this.action = action;
-				}
-			} 
+				bet = this.stack;
+				action = Player.Action.ALLIN;
+			}
+			this.stack -= bet;
+			if (!isNotLiveBet) {
+				this.liveBet += bet;				
+			}
+			if (action) {
+				this.action = action;
+			}
 			if (pot) { 
 				pot.build(bet, this);
 			}
@@ -493,11 +503,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		},
 		// Player bets the remainder of their chips.
 		allIn: function(pot) {
-			var rest = this.stack;
-			this.liveBet += rest;
-			this.stack = 0;
-			this.action = Player.Action.ALLIN;
-			return rest;
+			return this.absoluteBet(this.stack, Player.Action.ALLIN, pot);
 		},
 	}
 	/*
