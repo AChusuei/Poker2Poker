@@ -282,18 +282,18 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
 
 		it('drawing cards should convert properly', function() {
 			var cs = cardDeck.draw();
-			console.log('card tr: ' + cs);
+			// console.log('card tr: ' + cs);
 			var card = handEvaluator.getCard(cs.rank, cs.suit);
-            console.log('card obj: ' + card);
+            // console.log('card obj: ' + card);
         });
 
         it('should evaluate some hand from seven cards drawn', function() {
         	var playerCards = drawCards(2);
         	var community = drawCards(5); 
-        	console.log('player cards: ' + playerCards);
-        	console.log('community cards: ' + community);
+        	// console.log('player cards: ' + playerCards);
+        	// console.log('community cards: ' + community);
         	var hand = handEvaluator.evaluateHand(playerCards, community);
-			console.log('hand: ' + hand);        	
+			// console.log('hand: ' + hand);        	
         });
 
         xit('should evaluate some hand from seven cards flush', function() {

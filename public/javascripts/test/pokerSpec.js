@@ -741,12 +741,9 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should formulate correct action options for big blind when small blind opens with a larger than minimum bet', function() {
-            console.log('bb', this.table.blindStructure.getBlindLevel().bigBlind );
             var largerThanMinBet = this.table.blindStructure.getBlindLevel().bigBlind * 2;
-            console.log('larger', largerThanMinBet);
             var nlp = this.table.nextLivePlayer();
             nlp.bet(largerThanMinBet);
-            console.log('nlp', nlp);
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
             expect(options.callBet).toEqual(largerThanMinBet);
             expect(options.minimumRaise).toEqual(largerThanMinBet * 2);
