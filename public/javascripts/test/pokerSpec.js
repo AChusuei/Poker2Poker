@@ -48,9 +48,8 @@ define(['poker', 'moment'], function(poker, moment) {
             _.each(allPlayers, function(p) {
                 newPlayers.push(poker.createLocalPlayer(p.name, startingStack));
             });
-            this.table = poker.createTable(newPlayers);
-            var blindStructure = poker.createBlindStructure(startingStack, levels);
-            this.table.blinds = blindStructure.getBlindLevel();
+            this.table = poker.createTable(newPlayers, startingStack, levels);
+            this.table.blindStructure.determineBlindLevel();
             _.each(this.table.players, function(player) {
                 player.action = poker.Player.Action.YETTOACT;
             }, this);
@@ -131,13 +130,13 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should have an initial pot equal equal to (# of players * ante + big blind + small blind) after posting blinds and antes', function() {
-            var blindLevel = this.table.blinds;
+            var blindLevel = this.table.blindStructure.getBlindLevel();
             var pot = this.table.postBlindsAndAntes();
             expect(this.table.getCurrentPot().amount).toEqual((this.table.getNumberOfPlayers() * blindLevel.ante) + blindLevel.smallBlind + blindLevel.bigBlind);
         });
 
         it('should only post blinds and antes from the correct positions (after the button)', function() {
-            var blindLevel = this.table.blinds;
+            var blindLevel = this.table.blindStructure.getBlindLevel();
             this.table.postBlindsAndAntes();
             // reset current player cursor to make it easier to find the players after the button
             this.table.currentPlayer = this.table.button; 
@@ -158,7 +157,7 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should only post blinds from players who still have chips', function() {
-            var blindLevel = this.table.blinds;
+            var blindLevel = this.table.blindStructure.getBlindLevel();
             // reset current player cursor to make it easier to find the players after the button
             this.table.button = 0;
             this.table.currentPlayer = this.table.button; 
@@ -176,10 +175,9 @@ define(['poker', 'moment'], function(poker, moment) {
             _.each(_.sample(allPlayers, 2), function(p) {
                 newPlayers.push(poker.createLocalPlayer(p.name, startingStack));
             });
-            this.table = poker.createTable(newPlayers);
-            var blindStructure = poker.createBlindStructure(startingStack, levels);
-            this.table.blinds = blindStructure.getBlindLevel();
-            var blindLevel = this.table.blinds;
+            this.table = poker.createTable(newPlayers, startingStack, levels);
+            this.table.blindStructure.determineBlindLevel();
+            var blindLevel = this.table.blindStructure.getBlindLevel();
             // reset current player cursor to make it easier to find the players after the button
             this.table.button = 0;
             this.table.currentPlayer = this.table.button; 
@@ -242,7 +240,7 @@ define(['poker', 'moment'], function(poker, moment) {
                 this.table.nextLivePlayer().fold();   
             } while (this.table.currentPlayer !== this.table.button);
             // small blind calls big blind ... 
-            this.table.nextLivePlayer().call(this.table.blinds.bigBlind);
+            this.table.nextLivePlayer().call(this.table.blindStructure.getBlindLevel().bigBlind);
             expect(this.table.isStreetOver()).toBeFalsy();
         });
 
@@ -638,7 +636,7 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(this.table.isStreetOver()).toBeTruthy();
             this.table.getStatus();
             this.table.resolvePots();
-            console.log('pots',this.table.pots); // too dependent on when people fold. 
+            // console.log('pots',this.table.pots); // too dependent on when people fold. 
             this.table.handEvaluator.evaluateHand.andCallFake(function() { return playerTwoWins; });
             this.table.resolvePotWinners();
             expect(smallBlind.stack).toEqual(0);
@@ -646,10 +644,29 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(button.stack).toEqual(1000); // ??
         });
 
+        it('should formulate base action options when it is heads up (two players)', function() {
+            var newPlayers = [];
+            _.each(_.sample(allPlayers, 2), function(p) {
+                newPlayers.push(poker.createLocalPlayer(p.name, startingStack));
+            });
+            this.table = poker.createTable(newPlayers, startingStack, levels);
+            this.table.blindStructure.determineBlindLevel();
+            var blindLevel = this.table.blindStructure.getBlindLevel();
+            // reset current player cursor to make it easier to find the players after the button
+            this.table.button = 0;
+            this.table.currentPlayer = this.table.button; 
+            this.table.postBlindsAndAntes();
+            var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
+            expect(options.callBet).toEqual(30);
+            expect(options.minimumRaise).toEqual(this.table.blindStructure.getBlindLevel().bigBlind * 2);
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
+            expectContainsAll(expectedActions, options.actions);
+        });
+
         it('should formulate base action options when no one has acted yet and small blind has ten big blinds in stack', function() {
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
             expect(options.callBet).toEqual(0);
-            expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind);
+            expect(options.minimumRaise).toEqual(this.table.blindStructure.getBlindLevel().bigBlind);
             var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
             expectContainsAll(expectedActions, options.actions);
         });
@@ -660,7 +677,7 @@ define(['poker', 'moment'], function(poker, moment) {
             }; // everyone checks to the button
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
             expect(options.callBet).toEqual(0);
-            expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind);
+            expect(options.minimumRaise).toEqual(this.table.blindStructure.getBlindLevel().bigBlind);
             var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
             expectContainsAll(expectedActions, options.actions);
         });
@@ -715,17 +732,21 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should formulate correct action options when small blind opens with a minimum bet (amount of big blind)', function() {
-            this.table.nextLivePlayer().bet(this.table.blinds.bigBlind); // small blind opens
+            this.table.nextLivePlayer().bet(this.table.blindStructure.getBlindLevel().bigBlind); // small blind opens
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
-            expect(options.callBet).toEqual(this.table.blinds.bigBlind);
-            expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind * 2);
+            expect(options.callBet).toEqual(this.table.blindStructure.getBlindLevel().bigBlind);
+            expect(options.minimumRaise).toEqual(this.table.blindStructure.getBlindLevel().bigBlind * 2);
             var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CALL, poker.Player.Action.RAISE];
             expectContainsAll(expectedActions, options.actions);
         });
 
         it('should formulate correct action options for big blind when small blind opens with a larger than minimum bet', function() {
-            var largerThanMinBet = this.table.blinds.bigBlind * 2;
-            this.table.nextLivePlayer().bet(largerThanMinBet);
+            console.log('bb', this.table.blindStructure.getBlindLevel().bigBlind );
+            var largerThanMinBet = this.table.blindStructure.getBlindLevel().bigBlind * 2;
+            console.log('larger', largerThanMinBet);
+            var nlp = this.table.nextLivePlayer();
+            nlp.bet(largerThanMinBet);
+            console.log('nlp', nlp);
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
             expect(options.callBet).toEqual(largerThanMinBet);
             expect(options.minimumRaise).toEqual(largerThanMinBet * 2);
@@ -734,8 +755,8 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should formulate correct action options for UTG when small blind is raised by big blind', function() {
-            var bet = this.table.blinds.bigBlind * 2;
-            var raise = this.table.blinds.bigBlind * 4;
+            var bet = this.table.blindStructure.getBlindLevel().bigBlind * 2;
+            var raise = this.table.blindStructure.getBlindLevel().bigBlind * 4;
             this.table.nextLivePlayer().bet(bet);
             this.table.nextLivePlayer().raise(raise);
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
@@ -746,8 +767,8 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should formulate correct action options for UTG when small blind is raised by big blind', function() {
-            var bet = this.table.blinds.bigBlind * 2;
-            var raise = this.table.blinds.bigBlind * 4;
+            var bet = this.table.blindStructure.getBlindLevel().bigBlind * 2;
+            var raise = this.table.blindStructure.getBlindLevel().bigBlind * 4;
             this.table.nextLivePlayer().bet(bet);
             this.table.nextLivePlayer().raise(raise);
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
@@ -804,18 +825,17 @@ define(['poker', 'moment'], function(poker, moment) {
     describe('A BlindStructure', function() {
 
         beforeEach(function() {
-            this.blindStructure = poker.createBlindStructure(startingStack, levels);
+            this.blindStructure = poker.createBlindStructure(levels);
         });
 
         it('should be initialized properly', function() {
-            expect(this.blindStructure.startingStack).toEqual(startingStack);
             expect(this.blindStructure.levels.length).toEqual(levels.length);
         });
 
         it('should pull the first blind level when getBlindLevel is called the first time', function() {
             // add just a tiny delay in case test runs too fast
             var testTime = moment().subtract(1, 'ms');
-            var level = this.blindStructure.getBlindLevel();
+            var level = this.blindStructure.determineBlindLevel();
 
             expect(level.smallBlind).toEqual(15);
             expect(level.bigBlind).toEqual(30);
@@ -825,12 +845,12 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should move to the next level when the time for the level is up.', function() {
-            var level = this.blindStructure.getBlindLevel();
+            var level = this.blindStructure.determineBlindLevel();
             // add just a tiny delay in case test runs too fast
             var lastChangeTime = this.blindStructure.lastTimeBlindsWentUp.clone().subtract(1, 'ms');
             this.blindStructure.lastTimeBlindsWentUp.subtract(level.min + 2, 'minutes');
 
-            var newLevel = this.blindStructure.getBlindLevel();
+            var newLevel = this.blindStructure.determineBlindLevel();
             expect(newLevel.smallBlind).toEqual(20);
             expect(newLevel.bigBlind).toEqual(40);
             expect(newLevel.ante).toEqual(2);
@@ -839,11 +859,11 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should NOT move to the next level when the time for the level is not yet up', function() {
-            var level = this.blindStructure.getBlindLevel();
+            var level = this.blindStructure.determineBlindLevel();
             var lastChangeTime = this.blindStructure.lastTimeBlindsWentUp.clone();
 
             // assuming the blind levels are at least a few seconds ...
-            var newLevel = this.blindStructure.getBlindLevel();
+            var newLevel = this.blindStructure.determineBlindLevel();
             expect(level.smallBlind).toEqual(15);
             expect(level.bigBlind).toEqual(30);
             expect(level.ante).toEqual(1);

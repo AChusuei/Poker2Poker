@@ -121,6 +121,7 @@ function(pokerHandEvaluator,   moment) {
 		formulateActionOptions: function(player) {
 			// With no previous action, the minimum amount a player can bet.
 			var minimumBet = this.blindStructure.getBlindLevel().bigBlind;
+			// console.log(this.blindStructure.getBlindLevel().bigBlind);
 			// The current bet required by all players who wish to stay in the hand.
 			var callBet = _.chain(this.players)
 			    .filter(function(p) { return p.action !== Player.Action.FOLD; } )
@@ -131,6 +132,9 @@ function(pokerHandEvaluator,   moment) {
 			    .filter(function(p) { return p.action != Player.Action.FOLD && p.liveBet < callBet; } )
 				.max(function(p) { return p.liveBet; }, this)
 				.value().liveBet;
+			if (maxNonCallBet === undefined) {
+				maxNonCallBet = 0;
+			}
 			var minimumRaiseDelta = ((callBet - maxNonCallBet) < minimumBet ? minimumBet : callBet - maxNonCallBet);
 			// The absolute value of the minimum raise.
 			var minimumRaise = Math.min(callBet + minimumRaiseDelta, player.liveBet + player.stack);
@@ -507,8 +511,8 @@ function(pokerHandEvaluator,   moment) {
     return {
      	createLocalPlayer : function(name, stack) { return new Player(name, stack, null, true); },
      	createRemotePlayer : function(connection, stack) { return new Player(connection.peer, stack, connection.peer, false); },
-     	createBlindStructure : function(levels) { return new BlindStructure(startingStack, levels); },
-     	createTable : function(players) { return new Table(players); },
+     	createBlindStructure : function(levels) { return new BlindStructure(levels); },
+     	createTable : function(players, startingStack, levels) { return new Table(players, startingStack, levels); },
      	createPot : function(players) { return new Pot(); },
      	startTournamentGame: function(players, startingStack, levels, gameController) {
      		table = new Table(players, startingStack, levels, gameController);
