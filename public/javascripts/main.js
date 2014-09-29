@@ -28,7 +28,8 @@ requirejs.config({
 });
 
 // Start the main app logic.
-requirejs(['jquery', 'react', 'bootstrap', 'poker', 'peerActions', 'gameUI'],
-function($, react, bootstrap, poker, peerActions, gameUI) {
-    peerActions.startSession(gameUI);
+requirejs(['jquery', 'react', 'bootstrap', 'poker', 'peerActions', 'gameUI', 'gameController'],
+function($, react, bootstrap, poker, peerActions, gameUI, gameController) {    
+    gameController.initialize(gameUI, poker, peerActions);
+    gameController.startSession();
 });

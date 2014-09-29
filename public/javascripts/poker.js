@@ -1,29 +1,19 @@
-define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, moment) {
-
-	function HandEvaluator(cards) {
-
-	}
-	HandEvaluator.prototype = {
-		getWinner: function(incumbent, challenger, communityCards) {
-
-		},
-	};
+define(['pokerHandEvaluator', 'moment', 'underscore', 'playingCards'], 
+function(pokerHandEvaluator,   moment) {
 
     /*
      Start table object regarding table position and dealing.
      */
-	function Table(players) {
-		// Lists all of the players at the table (even if they're out of chips)
-		this.initializePlayerPositions(players);
-		// Index of player with the button.
-		this.button = Math.floor((Math.random() * this.players.length));
-		// Index of player to whom action is on.
-		this.currentPlayer = this.button;
+	function Table(players, startingStack, levels, gameController) {
+		this.initializePlayerPositions(players, startingStack);
+		this.randomizeButton(); 
 		this.deck = new playingCards();
-		this.handEvaluator = new HandEvaluator();
+		this.handEvaluator = pokerHandEvaluator;
+		this.blindStructure = new BlindStructure(levels);
+		this.gameController = gameController; 
 	}
 	Table.prototype = {
-		initializePlayerPositions: function(players) {
+		initializePlayerPositions: function(players, startingStack) {
 			this.players = [];
 			while (players.length > 0) {
 				var randomIndex = Math.floor((Math.random() * players.length));
@@ -31,6 +21,15 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				this.players.push(players[randomIndex]);
 				players.splice(randomIndex, 1);
 			};
+			_.each(this.players, function(player) {
+				player.stack = startingStack;
+			});
+		},
+		randomizeButton: function() {
+			// Index of player with the button.
+			this.button = Math.floor((Math.random() * this.players.length));
+			// Index of player to whom action is on.
+			this.currentPlayer = this.button;
 		},
 		getNumberOfPlayers: function() {
 			return this.players.length;
@@ -68,11 +67,12 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		// Note that this sets the table such that the next live player should be UTG
 		postBlindsAndAntes: function() {
 			this.pots = [this.startPot()];
+			var blinds = this.blindStructure.determineBlindLevel();
 			var currentPot = this.pots[0]; 
 			// get antes from every player.
 			// TODO: find minimum ante.
 			_.each(this.players, function(player) {
-				currentPot.amount += player.ante(this.blinds.ante);
+				currentPot.amount += player.ante(blinds.ante);
 			}, this);
 			if (this.players.length === 2) { // We are heads up; 
 				// Button posts small blind.
@@ -85,22 +85,15 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				// Player after small blind posts big blind.
 				var bbPlayer = this.nextLivePlayer();
 			}
-			var sbBet = sbPlayer.postBlind(this.blinds.smallBlind, currentPot);
-			var bbBet = bbPlayer.postBlind(this.blinds.bigBlind, currentPot);
+			var sbBet = sbPlayer.postBlind(blinds.smallBlind, currentPot);
+			var bbBet = bbPlayer.postBlind(blinds.bigBlind, currentPot);
 		},
 		// One whole game. Winner is the last one standing.
-		startTournamentGame: function(players, levels, startingStack) {
-			var table = new Table(players);
-			_.each(this.players, function(player) {
-				player.stack = startingStack;
-			});
-			var blindStructure = poker.createBlindStructure(startingStack, levels);
+		startTournamentGame: function() {
 			this.startRound();
 		},
 		// One deal of the cards. Multiple pots may be awarded.
 		startRound: function() {
-			// Set up main pot.
-			this.table.blinds = blindStructure.getBlindLevel();
 			this.dealCards();
 			this.postBlindsAndAntes(); // todo: antes might be low, might req side pot ... 
 			this.street = this.Street.PREFLOP;
@@ -109,10 +102,10 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		// Play one street of poker. 
 		startStreet: function() {
 			_.each(this.players, function(player) {
-				player.action = this.PlayerAction.YETTOACT;
+				player.action = Player.Action.YETTOACT;
+			});
+			if (this.street > this.Street.PREFLOP) {
 				player.liveBet = 0;
-			}, this);
-			if (this.street > this.Street.PREFLOP) { 
 				this.resetButton();
 			};
 			this.promptNextPlayerToAct();
@@ -121,13 +114,13 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			var player = this.nextLivePlayer();
 			var options = this.formulateActionOptions(player);
 			var currentTable = this;
-			player.promptForAction(options, function(response) { 
+			this.gameController.promptPlayerAction(player, options, function(response) { 
 				currentTable.resolvePlayerAction(response); 
 			});			
 		},
 		formulateActionOptions: function(player) {
 			// With no previous action, the minimum amount a player can bet.
-			var minimumBet = this.blinds.bigBlind;
+			var minimumBet = this.blindStructure.getBlindLevel().bigBlind;
 			// The current bet required by all players who wish to stay in the hand.
 			var callBet = _.chain(this.players)
 			    .filter(function(p) { return p.action !== Player.Action.FOLD; } )
@@ -138,8 +131,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 			    .filter(function(p) { return p.action != Player.Action.FOLD && p.liveBet < callBet; } )
 				.max(function(p) { return p.liveBet; }, this)
 				.value().liveBet;
-			var minimumRaiseDelta = (callBet === 0 ? minimumBet : callBet - maxNonCallBet);
-			// console.log('CB/MRD:' + callBet + '/' + minimumRaiseDelta);
+			var minimumRaiseDelta = ((callBet - maxNonCallBet) < minimumBet ? minimumBet : callBet - maxNonCallBet);
 			// The absolute value of the minimum raise.
 			var minimumRaise = Math.min(callBet + minimumRaiseDelta, player.liveBet + player.stack);
 			var actions = [Player.Action.FOLD, Player.Action.ALLIN];
@@ -243,6 +235,11 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 				return player.action !== Player.Action.FOLD;
 		    });
 		},
+		foldedPlayers: function() {
+			return _.filter(this.players, function(player) { 
+				return player.action === Player.Action.FOLD;
+		    });
+		},
 		getStatus: function() {
 			var button = this.button;
 			console.log('Player Status ... ');
@@ -286,7 +283,7 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 		},
 		resolvePotWinners: function() {
 			var currentWinners = [];
-			var losers = [];
+			var losers = this.foldedPlayers();
 			while (this.pots.length > 0) {
 				var currentPot = this.pots.pop();
 				if (currentPot.amount === 0) {
@@ -394,30 +391,32 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 	/*
      BlindStructure: holds blind levels of the game.
      */
-	function BlindStructure(startingStack, levels) {
-		this.startingStack = startingStack;
+	function BlindStructure(levels) {
 		this.levels = levels;
 		this.currentLevel = -1; // initial getBlindLevel() will initialize this to zero;
 		this.lastTimeBlindsWentUp = null;
 	};
 	BlindStructure.prototype = {
 		getBlindLevel: function() {
+			return this.levels[this.currentLevel];
+		},
+		determineBlindLevel: function() {
 			if (this.currentLevel === -1 || moment().diff(this.lastTimeBlindsWentUp, 'minutes') > this.levels[this.currentLevel].min) {
 				this.currentLevel += 1;
 				this.lastTimeBlindsWentUp = moment();
 			}
-			return this.levels[this.currentLevel];
+			return this.getBlindLevel();
 		},
 	} 
 
 	/*
      Start Player object. Mostly information around remaining stack and betting methods.
      */
-	function Player(name, stack, connection) {
+	function Player(name, stack, peerId) {
 	 	this.name = name;
 		this.stack = stack;
 		this.liveBet = 0;
-		this.connection = connection;
+		this.peerId = peerId;
 	};
 	Player.Action = {
 		YETTOACT: 'YetToAct', // Player passes at making a bet
@@ -432,20 +431,13 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
 	};
 	Player.prototype = {
 		isLocal: function() {
-			return (this.connection == null);
+			return (this.peerId == null);
 		},
-		promptForAction: function(options, callBack) {
-			if (this.isLocal()) {
-				gameUI.promptPlayerAction(this, options, callBack);
-			} else {
-				this.connection.promptPlayerAction(options, callBack);
-			}
-		},
-		// Player checks. Nothing cheanges monetarily for player.
+		// Player checks. Nothing changes monetarily for player.
 		check: function() {
 			this.action = Player.Action.CHECK;
 		},
-		// Player folds. Nothing cheanges monetarily for player.
+		// Player folds. Nothing changes monetarily for player.
 		fold: function() {
 			this.action = Player.Action.FOLD;
 		},
@@ -510,12 +502,18 @@ define(['gameUI', 'moment', 'underscore', 'playingCards'], function(gameUI, mome
      End Player object.
      */
 
+    var table; 
+
     return {
      	createLocalPlayer : function(name, stack) { return new Player(name, stack, null, true); },
-     	createRemotePlayer : function(conn, stack) { return new Player(connection.peer, stack, connection, false); },
-     	createBlindStructure : function(startingStack, levels) { return new BlindStructure(startingStack, levels); },
+     	createRemotePlayer : function(connection, stack) { return new Player(connection.peer, stack, connection.peer, false); },
+     	createBlindStructure : function(levels) { return new BlindStructure(startingStack, levels); },
      	createTable : function(players) { return new Table(players); },
      	createPot : function(players) { return new Pot(); },
+     	startTournamentGame: function(players, startingStack, levels, gameController) {
+     		table = new Table(players, startingStack, levels, gameController);
+     		table.startTournamentGame();
+     	},
      	Player: { Action : Player.Action } ,
     }
 });

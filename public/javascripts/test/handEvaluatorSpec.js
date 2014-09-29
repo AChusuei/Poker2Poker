@@ -249,7 +249,7 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
 
 	describe('Hand Comparisons:', function() {
 
-		it('AtoTnoFlush should beat Jto7noFlush', function() {
+		it('the hand on the left should beat the hand on the right', function() {
 			verifyHandOneBeatsHandTwo(AtoTnoFlush, Jto7noFlush);
 			verifyHandOneBeatsHandTwo(JackHighFlushHigher, JackHighFlush);
 			verifyHandOneBeatsHandTwo(JackHighFlush, wheelnoFlush);
@@ -276,18 +276,18 @@ define(['pokerHandEvaluator', 'playingCards', 'underscore'], function(handEvalua
             this.kh = handEvaluator.getCardFromString('KH');
         });        
 
-        xit('should compare correctly', function() {
+        it('should compare correctly', function() {
             expect(this.kh.compare(this.ah) < 0).toBeTruthy();
         });
 
-		xit('drawing cards should convert properly', function() {
+		it('drawing cards should convert properly', function() {
 			var cs = cardDeck.draw();
 			console.log('card tr: ' + cs);
 			var card = handEvaluator.getCard(cs.rank, cs.suit);
             console.log('card obj: ' + card);
         });
 
-        xit('should evaluate some hand from seven cards drawn', function() {
+        it('should evaluate some hand from seven cards drawn', function() {
         	var playerCards = drawCards(2);
         	var community = drawCards(5); 
         	console.log('player cards: ' + playerCards);
