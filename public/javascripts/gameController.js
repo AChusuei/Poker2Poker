@@ -44,7 +44,7 @@ define(function() {
 				resolveRemotePlayerAction.callBack(json.data.response);
 				break;
 			case MessageType.PlayerInformationRequest: 
-				sendUserName();
+				sendUserName(peerId);
 				break;
 			case MessageType.PlayerInformationResponse: 
 				signalGameUI('remoteUserName', { peerId: peerId, userName: json.data.userName });

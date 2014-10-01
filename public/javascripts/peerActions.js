@@ -43,6 +43,7 @@ define(['peer'], function(peer) {
 				gameController.signalGameUI('data', { data : json });
 		  		gameController.routeRemoteMessage(c.peer, json);
 		    });
+		    gameController.getUserName(c.peer);
 		});
 		connections[c.peer] = c;
 	};
