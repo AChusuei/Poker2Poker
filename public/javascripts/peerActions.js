@@ -15,7 +15,8 @@ define(['peer'], function(peer) {
 			// when remote wants to connect to us...
 	    	console.log('Remote peer ' + remoteConnection.peer + ' asked for connection');
 	    	initializeConnection(remoteConnection);
-	    	gameController.signalGameUI('connection', { peerId : remoteConnection.peer }); // todo: signal more than one connection 
+	    	gameController.signalGameUI('connection', { peerId : remoteConnection.peer }); // todo: signal more than one connection
+	    	// gameController.getUserName(remoteConnection.peer);
 		});
 		peer.on('close', function() {
 	    	console.log('peer ' + this.id + ' was closed.');
@@ -29,11 +30,13 @@ define(['peer'], function(peer) {
 
 		// alert console that we've connected to remote peer.
         console.log('We connected to peer ' + connections[peerId].peer);
-        gameController.signalGameUI('connection', { peerId : connections[peerId].peer }); // todo: signal more than one connection 
+        gameController.signalGameUI('connection', { peerId : connections[peerId].peer }); // todo: signal more than one connection
+        // gameController.getUserName(peerId);
 	};
 
 	var initializeConnection = function(c) {
 		c.on('open', function() { 
+			console.log(c.peer + ' is open and ready for transmission.');
 			// Receive messages
 			c.on('data', function(json) {
 				console.log('Received some data from ' + c.peer + ': ' + json);
@@ -72,12 +75,6 @@ define(['peer'], function(peer) {
     	sendMessage: sendMessage,
     	sendMessageToAll: sendMessageToAll,
     	getAllConnections: getAllConnections,
-    	// startSession: function(gameUI) { 
-    	// 	peerSession = new PeerSession(gameUI);
-    	// 	peerSession.startSession();
-    	// 	return peerSession; 
-    	// },
-    	// getSession: function() { return peerSession; }
     };
 
 });

@@ -4,8 +4,10 @@ define(function() {
 	var poker;
 	var peerActions;
 	var resolveRemotePlayerAction;
+	var userName;
 
-	var startSession = function() {
+	var startSession = function(u) {
+		userName = u;
 		peerActions.startSession(this);
 	};
 
@@ -41,8 +43,27 @@ define(function() {
 			case MessageType.PlayerActionResponse: 
 				resolveRemotePlayerAction.callBack(json.data.response);
 				break;
+			case MessageType.PlayerInformationRequest: 
+				sendUserName();
+				break;
+			case MessageType.PlayerInformationResponse: 
+				signalGameUI('remoteUserName', { peerId: peerId, userName: json.data.userName });
+				break;
 		}
 	};
+
+	var getUserName = function(peerId) {
+		peerActions.sendMessage(peerId, {
+			type: MessageType.PlayerInformationRequest,
+		});
+	}
+
+	var sendUserName = function(peerId) {
+		peerActions.sendMessage(peerId, {
+			type: MessageType.PlayerInformationResponse,
+			data: { userName: userName },
+		});
+	}
 
 	var promptRemotePlayerAction = function(peerId, options, callBack) {
 		peerActions.sendMessage(peerId, {
@@ -83,6 +104,8 @@ define(function() {
 	}
 
 	var MessageType = {
+		PlayerInformationRequest: 'requestPlayerInformation',
+		PlayerInformationResponse: 'receivePlayerInformation',
 		PlayerActionRequest: 'requestPlayerAction',
 		PlayerActionResponse: 'receivePlayerAction',
 	};
@@ -100,6 +123,7 @@ define(function() {
 		startTournamentGame: startTournamentGame,
 		routeRemoteMessage: routeRemoteMessage,
 		connectToPeer: connectToPeer,
+		getUserName: getUserName,
 	};
 
 });

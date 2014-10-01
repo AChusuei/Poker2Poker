@@ -19,12 +19,12 @@
     <!-- Custom styles for this template -->
     <link href="stylesheets/gameTheme.css" rel="stylesheet"/>
 
-    <title>Poker 2 Poker: Game XYZ</title>
+    <title>Poker2Poker</title>
 
     
   </head>
-
   <body role="document">
+	<!--  
   	<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
       <div class="container">
         <div class="navbar-header">
@@ -55,19 +55,62 @@
               </ul>
             </li>
           </ul>
-        </div><!--/.nav-collapse -->
+        </div><
       </div>
-    </div>
-
+    </div>-->
     <div class="container theme-showcase" role="main">
+    	<div class="page-header">
+	        <h1>Poker2Poker</h1>
+	        <p class="lead">Please add other players to start.</p>
+    	</div>
+    	<div class="row">
+	        <div class="col-md-4" id="players">
+	        	<h2>Player List</h2>
+	        	<table class="table">
+	            <thead>
+	              <tr>
+	                <th>Peer Id</th>
+	                <th>Name</th>
+	                <th>Connect!</th>
+	              </tr>
+	            </thead>
+	            <tbody>
+	              <tr id="userInfo">
+	                <td id="personalPeerId"></td>
+	                <td><input type="text" id="userName" placeHolder="Who are you?" value="Alan Chusuei"/></td>
+	                <td><button type="button" class="btn btn-xs btn-success" id ="startSession">Start Session</button></td>
+	              </tr>
+	              <tr>
+	                <td><input type="text" id="remotePeerId"/></td>
+	                <td class="userName"></td>
+	                <td>
+	                	<button type="button" class="btn btn-xs btn-success" id="connectToPeer">Connect</button>
+	                	<button type="button" class="btn btn-xs btn-success" id="sendMessage">Send Message</button>
+                	</td>
+	              </tr>
+	              <tr>
+	                <td colspan="3"><span class="glyphicon glyphicon-plus-sign" id="addPeer"></span></td>
+	              </tr>
+	            </tbody>
+	          </table>
+	        </div>
+	        <div class="col-md-4" id="#pinfo">
+	        	<h2>For More info</h2>
+	        </div>
+	        <div class="col-md-4" id="felt">
+	        	<h2>Felt</h2>
+	        </div>
+	    </div>
+
 
 	    <!-- Main jumbotron for a primary marketing message or call to action -->
 	    <div class="jumbotron">
-	      <p>Your peer ID is <span id="peerId"/></p>
 	      <p>You have connected to peer ID <span id="connectedRemotePeerId"/></p>
 	      <p><span id="connInfo"/></p>
 	      <p>
+	      <!--
 	      	<input id="remotePeerId" type="text" placeholder="remotePeerId" class="form-control" style="width: 20%"><a id="connectToPeer" href="#" class="btn btn-primary btn-lg" role="button">Connect to peer &raquo;</a><a id="startTournamentGame" href="#" class="btn btn-primary btn-lg" role="button">Start game</a>
+	      	-->
 	      </p>
 	      <p>
 	      	<input id="messageToSend" type="text" class="form-control" placeholder="What to send?" style="width: 30%">

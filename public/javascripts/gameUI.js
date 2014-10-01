@@ -2,6 +2,10 @@ define(['jquery', 'gameController'],
 function($,        gameController) {
 
     // UI triggered events
+    $('#startSession').click(function() {
+        var userName = $('#userName').val();
+        gameController.startSession(userName);
+    });
     $('#connectToPeer').click(function() {
         var remotePeerId = $('#remotePeerId').val();
         gameController.connectToPeer(remotePeerId);
@@ -13,7 +17,7 @@ function($,        gameController) {
     $('#sendMessage').click(function() {
         var msg = $('#messageToSend').val();
         // var data = JSON.parse(msg);
-        gameController.submitPlayerAction('Bet', 120);
+        gameController.getUserName($('#sendMessage').parent().siblings().text());
         // var session = peerActions.getSession();      
         // peerActionssession.sendMessage(session.cc, msg);
         // peerActions.sendMessageToAll(msg);
@@ -60,9 +64,19 @@ function($,        gameController) {
         signal: function(action, info) {
             switch (action) {
                 case 'open': 
-                    $('#peerId').text(info.id); break;
+                    $('#personalPeerId').text(info.id);
+                    $('#startSession').attr('disabled', 'disabled');
+                    $('#userName').attr('disabled', 'disabled');
+                    $('#startSession').text('Session Started');
+                    break;
                 case 'connection':
-                    $('#connectedRemotePeerId').text(info.peerId);
+                    $('#remotePeerId').closest('tr').attr('id', 'remotePeer' + info.peerId);
+                    $('#remotePeerId').parent().text(info.peerId);
+                    $('#connectToPeer').attr('disabled', 'disabled');
+                    $('#connectToPeer').text('Connected');
+                    break;
+                case 'remoteUserName': 
+                    $('#remotePeer' + info.peerId + ' .userName').text(info.userName);
                     break;
                 case 'close':
                     $('#peerId').text(info.peerId + ', and was disconnected');
