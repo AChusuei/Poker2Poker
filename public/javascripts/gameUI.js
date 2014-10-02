@@ -1,12 +1,12 @@
-define(['jquery', 'gameController'], 
-function($,        gameController) {
+define(['jquery', 'gameController', 'jsx!components/commentBox'], 
+function($,        gameController,   reactComponents) {
 
     // UI triggered events
     $('#startSession').click(function() {
         var userName = $('#userName').val();
         gameController.startSession(userName);
     });
-    $('#connectToPeer').click(function() {
+    $('#connectedPlayers').on('click', 'button.connectToPeer', function() {
         var remotePeerId = $('#remotePeerId').val();
         gameController.connectToPeer(remotePeerId);
     });
@@ -22,7 +22,7 @@ function($,        gameController) {
         // peerActionssession.sendMessage(session.cc, msg);
         // peerActions.sendMessageToAll(msg);
     });
-    $('#startTournamentGame').click(function() {
+    $('#startGame').click(function() {
         // var msg = $('#messageToSend').val();
         // create player(s) for game.
         gameController.startTournamentGame();
@@ -61,19 +61,54 @@ function($,        gameController) {
         allIn: function() {
             submitPlayerAction(poker.Player.Action.ALLIN);
         },
+        renderGame: function() {
+            var table = {  players: [1,2,3,4,5,6,7,8,9] };
+            for (p = 0; p < table.players.length; p++) {
+                reactComponents.renderCB(document);
+            }/*
+            var CommentBox = React.createClass({displayName: 'CommentBox',
+              render: function() {
+                return (
+                  React.DOM.div({className: "commentBox"},
+                    "Hello, world! I am a CommentBox."
+                  )
+                );
+              }
+            });
+            for (p = 0; p < table.players.length; p++) {
+                React.renderComponent(
+                  CommentBox(null),
+                  document.getElementById('testReact')
+                );
+            }*/
+        },
         signal: function(action, info) {
+            var newPeerRow = '<tr> \
+                                    <td><input type="text" id="remotePeerId" class="form-control form-control-inline"/></td> \
+                                    <td class="userName"></td> \
+                                    <td> \
+                                        <button type="button" class="btn btn-success connectToPeer">Connect</button> \
+                                    </td> \
+                                </tr> \
+                              ';
             switch (action) {
                 case 'open': 
-                    $('#personalPeerId').text(info.id);
+                    $('#userPeerId').text(info.id);
                     $('#startSession').attr('disabled', 'disabled');
+                    var name = $('#userName').val();
                     $('#userName').attr('disabled', 'disabled');
                     $('#startSession').text('Session Started');
+                    $('#playerList').append(newPeerRow);
                     break;
                 case 'connection':
                     $('#remotePeerId').closest('tr').attr('id', 'remotePeer' + info.peerId);
                     $('#remotePeerId').parent().text(info.peerId);
-                    $('#connectToPeer').attr('disabled', 'disabled');
-                    $('#connectToPeer').text('Connected');
+                    var thisConnectButon = $('.connectToPeer');
+                    thisConnectButon.attr('disabled', 'disabled');
+                    thisConnectButon.text('Connected');
+                    thisConnectButon.removeClass('connectToPeer');
+                    thisConnectButon.closest('tr').after(newPeerRow);
+                    $('#startGame').removeAttr('disabled');
                     break;
                 case 'remoteUserName': 
                     $('#remotePeer' + info.peerId + ' .userName').text(info.userName);

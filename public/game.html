@@ -20,150 +20,169 @@
     <link href="stylesheets/gameTheme.css" rel="stylesheet"/>
 
     <title>Poker2Poker</title>
-
-    
   </head>
   <body role="document">
-	<!--  
-  	<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="#">Game XYZ</a>
-        </div>
-        <div class="navbar-collapse collapse">
-          <ul class="nav navbar-nav">
-            <li class="active"><a id="startOLDGame" href="#">Start Game</a></li>
-            <li class="active"><a id="endGame" href="#">End Game</a></li>
-            <li><a href="#about"></a></li>
-            <li><a href="#contact">Contact</a></li>
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <span class="caret"></span></a>
-              <ul class="dropdown-menu" role="menu">
-                <li><a href="#">Action</a></li>
-                <li><a href="#">Another action</a></li>
-                <li><a href="#">Something else here</a></li>
-                <li class="divider"></li>
-                <li class="dropdown-header">Nav header</li>
-                <li><a href="#">Separated link</a></li>
-                <li><a href="#">One more separated link</a></li>
-              </ul>
-            </li>
-          </ul>
-        </div><
-      </div>
-    </div>-->
-    <div class="container theme-showcase" role="main">
-    	<div class="page-header">
-	        <h1>Poker2Poker</h1>
-	        <p class="lead">Please add other players to start.</p>
-    	</div>
+    <div class="container" role="main">
     	<div class="row">
-	        <div class="col-md-4" id="players">
-	        	<h2>Player List</h2>
-	        	<table class="table">
+	        <h1>Poker2Poker</h1>
+    	</div>
+    	<div id="connectionDashboard">
+	    	<div class="row" class="col-md-12">
+				<h2>Connection Dashboard</h2>
+	    	</div>
+	    	<div class="row" class="col-md-12">
+				<h2><input class="form-control form-control-inline" type="text" id="userName" placeHolder="Who are you?"/>
+				<button type="button" class="btn btn-success" id="startSession">Start Session</button> -> <span id="userPeerId"></span></h2>
+	    	</div>
+	    	<div class="row">
+	        	<h2>Connected Players <button type="button" class="btn btn-primary" id="startGame">Start Game!</button></h2>
+	        	<table class="table" id="connectedPlayers">
+		            <thead>
+		              <tr>
+		                <th class="col-md-1">Peer Id</th>
+		                <th class="col-md-1">Name</th>
+		                <th class="col-md-1">Connect</th>
+		                <th class="col-md-1"></th>
+		              </tr>
+		            </thead>
+		            <tbody id="playerList">
+		            </tbody>
+	            </table>
+		    </div>
+	    </div>
+	    <div class="row" id="testReact">
+	    </div>
+	    <div class="row" id="gamePlayers">
+        	<h2>Players</h2>
+            <table class="table" id="gamePlayerTable">
 	            <thead>
 	              <tr>
-	                <th>Peer Id</th>
-	                <th>Name</th>
-	                <th>Connect!</th>
+	                <th class="col-md-2">Peer Id</th>
+	                <th class="col-md-2">Name</th>
+	                <th class="col-md-1">Button</th>
+	                <th class="col-md-1">Cards</th>
+	                <th class="col-md-1">Stack</th>
+	                <th class="col-md-1">Live Bet</th>
+	                <th class="col-md-4">Status</th>
+	              </tr>
+	            </thead>
+	            <tbody id="playerList"><!--
+	            	<tr id="peerXsomethingX">
+                        <td class="peerId"><code>41t73odr7fuvj9k9</code></td>
+                        <td class="userName">Alan Chusuei</td>
+                        <td class="button"></td>
+                        <td class="cards"><span class="blacksuit">A♠ </span><span class="redsuit">K♥ </span></td>
+                        <td class="stack">20000</td>
+                        <td class="liveBet">200</td>
+                        <td class="status">
+                        	<button type="button" class="btn btn-xs btn-success" disabled>Bet</button>
+                        	<button type="button" class="btn btn-xs btn-success" disabled>Check</button>
+                    	</td>
+                    </tr>
+                    <tr id="peerXsomethingX">
+                        <td class="peerId"><code>523vasdfhsdf24tsd</code></td>
+                        <td class="userName">Mary Rose Cook</td>
+                        <td class="button"></td>
+                        <td class="cards"><span class="redsuit">7♦ </span><span class="blacksuit">Q♠ </span></td>
+                        <td class="stack">15500</td>
+                        <td class="liveBet">600</td>
+                        <td class="status"><button type="button" class="btn btn-xs btn-info" disabled>Raise</button></td>
+                    </tr>
+                    <tr id="peerXsomethingX">
+                        <td class="peerId"><code>vjklt5wuhivhd7vi</code></td>
+                        <td class="userName">Max McCrea</td>
+                        <td class="button"></span></td>
+                        <td class="cards"><span class="redsuit">5♦ </span><span class="blacksuit">5♣ </span></td>
+                        <td class="stack">45000</td>
+                        <td class="liveBet">0</td>
+                        <td class="status">
+                        	<button type="button" class="btn btn-xs btn-danger" disabled>Fold</button>
+                        	<button type="button" class="btn btn-xs btn-danger" disabled>Muck Hand</button>
+                    	</td>
+                    </tr>
+                    <tr id="peerXsomethingX">
+                        <td class="peerId"><code>vhckiv68v7w7mn29</code></td>
+                        <td class="userName">Alan O'Donnell</td>
+                        <td class="button"></td>
+                        <td class="cards"><span class="blacksuit">6♠ </span><span class="redsuit">J♥ </span></td>
+                        <td class="stack">6600</td>
+                        <td class="liveBet">600</td>
+                        <td class="status">
+                        	<button type="button" class="btn btn-xs btn-success" disabled>Call</button>
+                        	<button type="button" class="btn btn-xs btn-danger" disabled>Shows Two Pair, Kings and Nines, Ten Kicker</button>
+                    	</td>
+                    </tr>
+                    <tr id="peerXsomethingX">
+                        <td class="peerId"><code>23453asdy34uaww4y</code></td>
+                        <td class="userName">Linda Chusuei</td>
+                        <td class="button"></td>
+                        <td class="cards"><span class="blacksuit">K♠ </span><span class="redsuit">K♦ </span></td>
+                        <td class="stack">000</td>
+                        <td class="liveBet">5000</td>
+                        <td class="status"><button type="button" class="btn btn-xs btn-warning" disabled>All-In</button></td>
+                    </tr>
+                    <tr id="peerXsomethingX">
+                        <td class="peerId"><code>bngmphajpgiaiogfj</code></td>
+                        <td class="userName">Phil Ivey</td>
+                        <td class="button"></td>
+                        <td class="cards"><span class="redsuit">9♦ </span><span class="redsuit">8♦ </span></td>
+                        <td class="stack">6600</td>
+                        <td class="stack">0</td>
+                        <td class="status">
+                        	<button type="button" class="btn btn-xs btn-default" disabled>Action</button>
+                        	<button type="button" class="btn btn-xs btn-success" disabled>Shows Full House, Nines Over Eights</button>
+                    	</td>
+                    </tr>
+                    <tr id="peerXsomethingX">
+                        <td class="peerId"><code>apgahgaphg23asdfs</code></td>
+                        <td class="userName">Annette Obrestad</td>
+                        <td class="button"><span class="glyphicon glyphicon-record"></span></td>
+                        <td class="cards"><span class="blacksuit">2♠ </span><span class="redsuit">3♦ </span></td>
+                        <td class="stack">6600</td>
+                        <td class="stack">0</td>
+                        <td class="status"><button type="button" class="btn btn-xs btn-default" disabled>Waiting For Player</button></td>
+                    </tr>-->
+	            </tbody>
+            </table>
+	    </div>
+	    <div class="row" id="userInfo">
+	    	<h2>User Status</h2>
+		    <table class="table" id="userInfoTable">
+	            <thead>
+	              <tr>
+	                <th class="col-md-2"><span class="h3">Cards</span></th>
+	                <th class="col-md-1"><span class="h3">Stack</span></th>
+	                <th class="col-md-2"><span class="h3">Status</span></th>
+	                <th class="col-md-9"><span class="h3">Actions</span></th>
 	              </tr>
 	            </thead>
 	            <tbody>
 	              <tr id="userInfo">
-	                <td id="personalPeerId"></td>
-	                <td><input type="text" id="userName" placeHolder="Who are you?" value="Alan Chusuei"/></td>
-	                <td><button type="button" class="btn btn-xs btn-success" id ="startSession">Start Session</button></td>
-	              </tr>
-	              <tr>
-	                <td><input type="text" id="remotePeerId"/></td>
-	                <td class="userName"></td>
-	                <td>
-	                	<button type="button" class="btn btn-xs btn-success" id="connectToPeer">Connect</button>
-	                	<button type="button" class="btn btn-xs btn-success" id="sendMessage">Send Message</button>
-                	</td>
-	              </tr>
-	              <tr>
-	                <td colspan="3"><span class="glyphicon glyphicon-plus-sign" id="addPeer"></span></td>
+	                <td id="userCards">
+                		<span class="blacksuit h1">A♠</span>
+                		<span class="redsuit h1">K♥</span>
+	                </td>
+	                <td id="userStack"><span class="h1">50000</span></td>
+	                <td id="userStatus"><span class="h1">WAITING</span></td>
+	                <td id="userActions">
+	                	<p>
+	                		<button type="button" class="btn btn-lg btn-danger">Fold</button>
+	                		<button type="button" class="btn btn-lg btn-success">4800 to Call</button>
+	                		<button type="button" class="btn btn-lg btn-info">Raise to:</button><input class="form-control form-control-inline input-lg small-width" type="number" id="raiseAmount" placeHolder="0"/>
+	                		<button type="button" class="btn btn-lg btn-warning">All In</button>
+	                	</p>
+	                </td>
 	              </tr>
 	            </tbody>
-	          </table>
-	        </div>
-	        <div class="col-md-4" id="#pinfo">
-	        	<h2>For More info</h2>
-	        </div>
-	        <div class="col-md-4" id="felt">
-	        	<h2>Felt</h2>
-	        </div>
-	    </div>
-
-	    <div class="page-header">
-	      <h1>Players</h1>
-	    </div>
-	    <div class="col-md-6">
-	      <table class="table table-striped">
-	        <thead>
-	          <tr>
-	            <th>Name</th>
-	            <th>Hand</th>
-	            <th>Stack</th>
-	            <th>Action</th>
-	          </tr>
-	        </thead>
-	        <tbody>
-	          <tr>
-	            <td><button type="button" class="btn btn-sm btn-primary" id="doIt">Alan Chusuei</button></td>
-	            <td><div id="yourHand"></div></td>
-	            <td><button type="button" class="btn btn-sm btn-success">5000</button></td>
-			        <!--<span class="label label-default">Default</span>
-			        <span class="label label-primary">Primary</span>-->
-			        
-			        <!--<span class="label label-info">Info</span>
-			        <span class="label label-warning">Warning</span>
-			        <span class="label label-danger">Danger</span>-->
-	            <td>
-	              <!--<button type="button" class="btn btn-sm btn-default">Default</button>
-				    <button type="button" class="btn btn-sm btn-primary">Primary</button>
-				    
-				    <button type="button" class="btn btn-sm btn-info">Info</button>
-				    <button type="button" class="btn btn-sm btn-warning">Warning</button>-->
-				    <button type="button" class="btn btn-sm btn-success">Bet</button>
-				    <button type="button" class="btn btn-sm btn-danger">Fold</button>
-				    <!--<button type="button" class="btn btn-sm btn-link">Link</button>-->
-	            </td>
-	          </tr>
-	          <tr>
-	            <td>Max McCrea</td>
-	            <td><canvas id="player2Hand" height="400"/></td>
-	            <td>12500</td>
-	            <td>Bets 50</td>
-	          </tr>
-	          <tr>
-	            <td>Alan O'Donnell</td>
-	            <td><div id="player3Hand"></div></td>
-	            <td>3500</td>
-	            <td>To Act</td>
-	          </tr>
-	        </tbody>
-	      </table>
-	    </div>
-	    <div class="container">
-		  <input type="button" id="shuffler" value="shuffle" />
-		  <input type="button" id="draw" value="draw a card" />
-		  <!--<input type="button" id="flop" value="flop community" />
-		  <input type="button" id="addCard" value="add drawn card back" />
-		  <input type="button" id="shuffleDraw" value="shuffle, then draw" />
-		  <input type="button" id="orderByRank" value="order by rank" />
-		  <input type="button" id="orderBySuit" value="order by suit" />-->
-	    </div>
-        <div class="container">
-          <canvas id="mycanvas"></canvas>
+	        </table>
         </div>
-       </div>
+	    <div class="row" id="felt">
+        	<h2>Pot(s): 550</h2>
+        	<h2>Blind(s): 10/20/1</h2>
+        	<h2>Community:
+        	<span class="blacksuit">5♠ </span><span class="redsuit">8♥ </span><span class="redsuit">9♦ </span><span class="blacksuit">9♣ </span><span class="blacksuit">T♦ </span>
+        	</h2>
+        </div>
+
   </body>
 </html>

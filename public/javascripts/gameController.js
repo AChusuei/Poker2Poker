@@ -5,6 +5,7 @@ define(function() {
 	var peerActions;
 	var resolveRemotePlayerAction;
 	var userName;
+	var table;
 
 	var startSession = function(u) {
 		userName = u;
@@ -84,19 +85,22 @@ define(function() {
 	}
 
 	var startTournamentGame = function() {
-		var players = [];
-        var levels = [
-            { smallBlind: 15, bigBlind: 30, ante: 1, min: 10 },
-            { smallBlind: 20, bigBlind: 40, ante: 2, min: 10 },
-            { smallBlind: 25, bigBlind: 50, ante: 3, min: 10 }
-        ];
-        var connections = peerActions.getAllConnections();
-        for (var c = 0; c < connections.length; c++) {
-            var player = poker.createRemotePlayer(connections[c]);
-            players.push(player);
-        }
-        players.push(poker.createLocalPlayer('Alan Chusuei'));
-        poker.startTournamentGame(players, 5000, levels, this);
+		// var players = [];
+  //       var levels = [
+  //           { smallBlind: 15, bigBlind: 30, ante: 1, min: 10 },
+  //           { smallBlind: 20, bigBlind: 40, ante: 2, min: 10 },
+  //           { smallBlind: 25, bigBlind: 50, ante: 3, min: 10 }
+  //       ];
+  //       var connections = peerActions.getAllConnections();
+  //       for (var c = 0; c < connections.length; c++) {
+  //           var player = poker.createRemotePlayer(connections[c]);
+  //           players.push(player);
+  //       }
+  //       players.push(poker.createLocalPlayer('Alan Chusuei'));
+  //       // Remove connection dashboard.
+  //       table = poker.startTournamentGame(players, 5000, levels, this);
+  //       // Add new section putting in player dashboard
+        gameUI.renderGame(table);
 	};
 
 	var signalGameUI = function(action, info) {

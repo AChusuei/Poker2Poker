@@ -517,6 +517,7 @@ function(pokerHandEvaluator,   moment) {
      	startTournamentGame: function(players, startingStack, levels, gameController) {
      		table = new Table(players, startingStack, levels, gameController);
      		table.startTournamentGame();
+     		return table;
      	},
      	Player: { Action : Player.Action } ,
     }

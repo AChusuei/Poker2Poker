@@ -11,12 +11,15 @@ requirejs.config({
         "playingCards.ui" : { "deps" : ['playingCards'] },
         "jCanvas" : { "deps" : ['jquery'] },
         "cards" : { "deps" : ['jquery','jCanvas'] },
+        JSXTransformer: { exports: "JSXTransformer" },
     },
     paths: {
     	jquery: 'http://code.jquery.com/jquery-1.11.0.min',
         bootstrap: 'http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min',
         peer: 'http://cdn.peerjs.com/0.3/peer.min',
-        react: 'http://fb.me/react-0.11.1',
+        React: 'http://fb.me/react-0.11.1',
+        JSXTransformer: 'JSXTransformer-0.11.1',
+        jsx: 'jsx',
         jCanvas: 'jCanvas',
         cards: 'jCanvasCards'
     },
@@ -28,7 +31,7 @@ requirejs.config({
 });
 
 // Start the main app logic.
-requirejs(['jquery', 'react', 'bootstrap', 'poker', 'peerActions', 'gameUI', 'gameController'],
-function($, react, bootstrap, poker, peerActions, gameUI, gameController) {    
+requirejs(['jquery', 'bootstrap', 'poker', 'peerActions', 'gameUI', 'gameController'],
+function($, bootstrap, poker, peerActions, gameUI, gameController) {    
     gameController.initialize(gameUI, poker, peerActions);
 });

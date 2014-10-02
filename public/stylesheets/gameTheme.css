@@ -1,8 +1,3 @@
-body {
-  padding-top: 70px;
-  padding-bottom: 30px;
-}
-
 .theme-dropdown .dropdown-menu {
   position: static;
   display: block;
@@ -15,4 +10,23 @@ body {
 
 .theme-showcase .navbar .container {
   width: auto;
+}
+
+.form-control-inline {
+    min-width: 0;
+    width: auto;
+    display: inline;
+    vertical-align: middle;
+}
+
+.small-width {
+	width: 100px;
+}
+
+span.redsuit {
+     color: #CC0000;
+}
+
+span.blacksuit {
+     color: black;
 }
