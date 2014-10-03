@@ -18,7 +18,7 @@ define(function() {
             callBack: callBack, 
         };
 		if (player.peerId) {
-	        promptRemotePlayerAction(player.peerId, options, callBack);
+	        promptRemotePlayerAction(player.peerId, options);
 		} else {
 			gameUI.promptPlayerAction(options);
 		}
@@ -66,7 +66,7 @@ define(function() {
 		});
 	}
 
-	var promptRemotePlayerAction = function(peerId, options, callBack) {
+	var promptRemotePlayerAction = function(peerId, options) {
 		peerActions.sendMessage(peerId, {
 			type: MessageType.PlayerActionRequest,
 			data: { options: options },

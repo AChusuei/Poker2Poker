@@ -1,4 +1,4 @@
-define(['jquery', 'gameController', 'jsx!components/commentBox'], 
+define(['jquery', 'gameController', 'jsx!components'], 
 function($,        gameController,   reactComponents) {
 
     // UI triggered events
@@ -62,25 +62,7 @@ function($,        gameController,   reactComponents) {
             submitPlayerAction(poker.Player.Action.ALLIN);
         },
         renderGame: function() {
-            var table = {  players: [1,2,3,4,5,6,7,8,9] };
-            for (p = 0; p < table.players.length; p++) {
-                reactComponents.renderCB(document);
-            }/*
-            var CommentBox = React.createClass({displayName: 'CommentBox',
-              render: function() {
-                return (
-                  React.DOM.div({className: "commentBox"},
-                    "Hello, world! I am a CommentBox."
-                  )
-                );
-              }
-            });
-            for (p = 0; p < table.players.length; p++) {
-                React.renderComponent(
-                  CommentBox(null),
-                  document.getElementById('testReact')
-                );
-            }*/
+            reactComponents.renderPokerPlayerTable();
         },
         signal: function(action, info) {
             var newPeerRow = '<tr> \
