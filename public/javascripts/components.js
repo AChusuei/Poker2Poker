@@ -1,5 +1,84 @@
-define(['React', 'underscore'], 
-function(React) {
+define(['React', 'gameController', 'underscore'], 
+function(React,   gameController) {
+
+    var connectedPlayerTable;
+
+    var ConnectedPlayerTable = React.createClass({
+        getInitialState: function() {
+            return {players: []};
+        },
+        startTournamentGame: function() {
+            gameController.startTournamentGame();
+        },
+        render: function() {
+            var disableStartGameButton = (this.state.players.length === 0);
+            return (
+                <div>
+                    <h2>Connected Players <button type="button" className="btn btn-primary" id="startGame" onClick={this.startTournamentGame} disabled={disableStartGameButton}>Start Game!</button>
+                    </h2>
+                    <table className="table" id="connectedPlayersTable">
+                        <thead>
+                          <tr>
+                            <th className="col-md-1">Peer Id</th>
+                            <th className="col-md-1">Name</th>
+                            <th className="col-md-1">Connect</th>
+                          </tr>
+                        </thead>
+                        <ConnectedPlayerList players={this.state.players}/>
+                    </table>
+                </div>
+            );  
+        }
+    });
+
+    var ConnectedPlayerList = React.createClass({
+        connectAndAddPlayer: function(e) {
+            var remotePeerId = this.refs.remotePeerId.getDOMNode().value.trim();
+            gameController.connectToPeer(remotePeerId);
+            this.refs.remotePeerId.getDOMNode().value = '';
+        },
+        render: function() {
+            var connectedPlayers = [];
+            _.each(this.props.players, function(player) {
+                connectedPlayers.push(<ConnectedPlayer key={player.peerId} player={player} />);
+            });
+            return (
+                <tbody id="connectedPlayerList">
+                    {connectedPlayers} 
+                    <tr>
+                        <td><input type="text" id="remotePeerId" className="form-control form-control-inline" ref="remotePeerId"/></td>
+                        <td colSpan="2">
+                            <button type="button" className="btn btn-success" onClick={this.connectAndAddPlayer}>Connect</button>
+                        </td>
+                    </tr>
+                </tbody>
+            );  
+        }
+    });
+
+    var ConnectedPlayer = React.createClass({
+        render: function() {
+            var player = this.props.player;
+            return (
+                <tr>
+                    <td>{player.peerId}</td>
+                    <td>{player.name}</td>
+                    <td><button type="button" className="btn btn-success btn-xs" disabled="disabled">Connected</button></td>
+                </tr> 
+            );  
+        }
+    });
+
+    var CONNECTEDPLAYERS = [
+        { peerId: '41t73odr7fuvj9k9', name: 'Alan Chusuei' }, 
+        { peerId: '523vasdfhsdf24ts', name: 'Mary Rose Cook' },
+        // { peerId: '121246234bzds32d', name: 'Max McCrea' },
+        // { peerId: 'vjklt5wuhivhd7vi', name: 'Alan O\'Donnell' },
+        // { peerId: 'vhckiv68v7w7mn29', name: 'Alan Chusuei' },
+        // { peerId: '23453asdy34uaww4', name: 'Liuda Nikolaeva' },
+        // { peerId: 'bngmphajpgiaiogf', name: 'Phil Ivey' },
+        // { peerId: 'apgahgaphg23asdf', name: 'Annette Obrestad' },
+    ];
 
     var PokerPlayerTable = React.createClass({
         render: function() {
@@ -150,11 +229,24 @@ function(React) {
         { peerId: 'apgahgaphg23asdf', name: 'Annette Obrestad', stack: 97000, button: true,  cards: [{ rank: '2', suit: 'C' }, { rank: '3', suit: 'D' }], action: 'Fold' },
     ];
 
+    var renderConnectedPlayerTable = function(parent) {
+        connectedPlayerTable = React.renderComponent(<ConnectedPlayerTable players={CONNECTEDPLAYERS}/>, document.getElementById('connectedPlayers'));
+    }
+
+    var updateConnectedPlayerTable = function(players) {
+        var ft = _.map(players, function(player) {
+            return { peerId: player.peerId, name: player.name };
+        });
+        connectedPlayerTable.setState({ players: ft });
+    }
+
     var renderPokerPlayerTable = function(parent) {
         React.renderComponent(<PokerPlayerTable players={PLAYERS}/>, document.getElementById('gamePlayers'));
     }
 
     return {
+        renderConnectedPlayerTable: renderConnectedPlayerTable,
+        updateConnectedPlayerTable: updateConnectedPlayerTable,
         renderPokerPlayerTable: renderPokerPlayerTable,
     }
 });

@@ -509,8 +509,8 @@ function(pokerHandEvaluator,   moment) {
     var table; 
 
     return {
-     	createLocalPlayer : function(name, stack) { return new Player(name, stack, null, true); },
-     	createRemotePlayer : function(connection, stack) { return new Player(connection.peer, stack, connection.peer, false); },
+     	createLocalPlayer : function(name, stack) { return new Player(name, stack, null); },
+     	createRemotePlayer : function(name, peerId, stack) { return new Player(name, stack, peerId); },
      	createBlindStructure : function(levels) { return new BlindStructure(levels); },
      	createTable : function(players, startingStack, levels) { return new Table(players, startingStack, levels); },
      	createPot : function(players) { return new Pot(); },

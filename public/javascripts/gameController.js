@@ -1,15 +1,20 @@
-define(function() {
+define(['underscore'], function() {
 
 	var gameUI;
 	var poker;
 	var peerActions;
+	var components;
 	var resolveRemotePlayerAction;
 	var userName;
-	var table;
+	var remotePlayerInformation = {};
 
 	var startSession = function(u) {
 		userName = u;
 		peerActions.startSession(this);
+	};
+
+	var updateConnectedPlayers = function() {
+		components.updateConnectedPlayerTable(getRemotePlayers());
 	};
 
 	var promptPlayerAction = function(player, options, callBack) {
@@ -48,7 +53,7 @@ define(function() {
 				sendUserName(peerId);
 				break;
 			case MessageType.PlayerInformationResponse: 
-				signalGameUI('remoteUserName', { peerId: peerId, userName: json.data.userName });
+				setRemoteUserInformation(peerId, json);
 				break;
 		}
 	};
@@ -65,6 +70,11 @@ define(function() {
 			data: { userName: userName },
 		});
 	}
+
+	var setRemoteUserInformation = function(peerId, info) {
+		remotePlayerInformation[peerId] = info;
+		updateConnectedPlayers(peerId);
+	} 
 
 	var promptRemotePlayerAction = function(peerId, options) {
 		peerActions.sendMessage(peerId, {
@@ -84,6 +94,18 @@ define(function() {
 		peerActions.connectToPeer(remotePeerId);
 	}
 
+	var getRemotePlayers = function() {
+		var players = [];
+        _.each(peerActions.getAllConnections(), function(connection) {
+        	var userName = '';
+        	if (connection.peer in remotePlayerInformation) {
+        		userName = remotePlayerInformation[connection.peer].data.userName;
+        	}
+        	players.push(poker.createRemotePlayer(userName, connection.peer));
+        });
+        return players;
+	}
+
 	var startTournamentGame = function() {
 		// var players = [];
   //       var levels = [
@@ -92,15 +114,18 @@ define(function() {
   //           { smallBlind: 25, bigBlind: 50, ante: 3, min: 10 }
   //       ];
   //       var connections = peerActions.getAllConnections();
-  //       for (var c = 0; c < connections.length; c++) {
-  //           var player = poker.createRemotePlayer(connections[c]);
+  //       _.each(connectedPlayerList, function(player) {
+  //       	var player = poker.createRemotePlayer(connections[c]);
   //           players.push(player);
+  //       });
+  //       for (var c = 0; c < connections.length; c++) {
+            
   //       }
   //       players.push(poker.createLocalPlayer('Alan Chusuei'));
   //       // Remove connection dashboard.
   //       table = poker.startTournamentGame(players, 5000, levels, this);
   //       // Add new section putting in player dashboard
-        gameUI.renderGame(table);
+  //       reactComponents.renderPokerPlayerTable(table);
 	};
 
 	var signalGameUI = function(action, info) {
@@ -115,13 +140,15 @@ define(function() {
 	};
 
 	return {
-		initialize: function(g, p, s) {
+		initialize: function(g, p, s, c) {
 			gameUI = g;
 			poker = p;
 			peerActions = s;
+			components = c;
 		},
 		startSession: startSession,
 		signalGameUI: signalGameUI,
+		updateConnectedPlayers: updateConnectedPlayers,
 		promptPlayerAction: promptPlayerAction,
 		submitPlayerAction: submitPlayerAction,
 		startTournamentGame: startTournamentGame,

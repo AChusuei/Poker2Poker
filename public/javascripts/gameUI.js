@@ -6,10 +6,6 @@ function($,        gameController,   reactComponents) {
         var userName = $('#userName').val();
         gameController.startSession(userName);
     });
-    $('#connectedPlayers').on('click', 'button.connectToPeer', function() {
-        var remotePeerId = $('#remotePeerId').val();
-        gameController.connectToPeer(remotePeerId);
-    });
     $('#endGame').click(function() {
         // peerActions.getSession().stopPeer();
         console.log('ENDING GAME!');
@@ -21,11 +17,6 @@ function($,        gameController,   reactComponents) {
         // var session = peerActions.getSession();      
         // peerActionssession.sendMessage(session.cc, msg);
         // peerActions.sendMessageToAll(msg);
-    });
-    $('#startGame').click(function() {
-        // var msg = $('#messageToSend').val();
-        // create player(s) for game.
-        gameController.startTournamentGame();
     });
 
     return {
@@ -80,20 +71,22 @@ function($,        gameController,   reactComponents) {
                     var name = $('#userName').val();
                     $('#userName').attr('disabled', 'disabled');
                     $('#startSession').text('Session Started');
-                    $('#playerList').append(newPeerRow);
+                    connectedPlayerTable = reactComponents.renderConnectedPlayerTable();
+                    // $('#connectedPlayerList').append(newPeerRow);
                     break;
                 case 'connection':
-                    $('#remotePeerId').closest('tr').attr('id', 'remotePeer' + info.peerId);
-                    $('#remotePeerId').parent().text(info.peerId);
-                    var thisConnectButon = $('.connectToPeer');
-                    thisConnectButon.attr('disabled', 'disabled');
-                    thisConnectButon.text('Connected');
-                    thisConnectButon.removeClass('connectToPeer');
-                    thisConnectButon.closest('tr').after(newPeerRow);
-                    $('#startGame').removeAttr('disabled');
+                    // connectedPlayerTable.setState(info);
+                    // $('#remotePeerId').closest('tr').attr('id', 'remotePeer' + info.peerId);
+                    // $('#remotePeerId').parent().text(info.peerId);
+                    // var thisConnectButon = $('.connectToPeer');
+                    // thisConnectButon.attr('disabled', 'disabled');
+                    // thisConnectButon.text('Connected');
+                    // thisConnectButon.removeClass('connectToPeer');
+                    // thisConnectButon.closest('tr').after(newPeerRow);
+                    // $('#startGame').removeAttr('disabled');
                     break;
                 case 'remoteUserName': 
-                    $('#remotePeer' + info.peerId + ' .userName').text(info.userName);
+                    // $('#remotePeer' + info.peerId + ' .userName').text(info.userName);
                     break;
                 case 'close':
                     $('#peerId').text(info.peerId + ', and was disconnected');
