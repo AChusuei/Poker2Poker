@@ -27,68 +27,13 @@
 	        <h1>Poker2Poker</h1>
     	</div>
     	<div id="connectionDashboard">
-	    	<!--<div class="row" class="col-md-12">
-				<h2>Connection Dashboard</h2>
-	    	</div>-->
 	    	<div class="row" class="col-md-12">
 				<h2><input class="form-control form-control-inline" type="text" id="userName" placeHolder="Who are you?"/>
 				<button type="button" class="btn btn-success" id="startSession">Start Session</button> -> <span id="userPeerId"></span></h2>
 	    	</div>
-	    	<div class="row" id="connectedPlayers"><!--
-	        	<h2>Connected Players <button type="button" class="btn btn-primary" id="startGame">Start Game!</button></h2>
-	        	<table class="table" id="connectedPlayersTable">
-		            <thead>
-		              <tr>
-		                <th class="col-md-1">Peer Id</th>
-		                <th class="col-md-1">Name</th>
-		                <th class="col-md-1">Connect</th>
-		                <th class="col-md-1"></th>
-		              </tr>
-		            </thead>
-		            <tbody id="playerList">
-		            </tbody>
-	            </table>-->
-		    </div>
+	    	<div class="row" id="connectedPlayers"></div>
 	    </div>
 	    <div class="row" id="gamePlayers"></div>
-	    <div class="row" id="userInfo">
-	    	<h2>User Status</h2>
-		    <table class="table" id="userInfoTable">
-	            <thead>
-	              <tr>
-	                <th class="col-md-2"><span class="h3">Cards</span></th>
-	                <th class="col-md-1"><span class="h3">Stack</span></th>
-	                <th class="col-md-2"><span class="h3">Status</span></th>
-	                <th class="col-md-9"><span class="h3">Actions</span></th>
-	              </tr>
-	            </thead>
-	            <tbody>
-	              <tr id="userInfo">
-	                <td id="userCards">
-                		<span class="blacksuit h1">A♠</span>
-                		<span class="redsuit h1">K♥</span>
-	                </td>
-	                <td id="userStack"><span class="h1">50000</span></td>
-	                <td id="userStatus"><span class="h1">WAITING</span></td>
-	                <td id="userActions">
-	                	<p>
-	                		<button type="button" class="btn btn-lg btn-danger">Fold</button>
-	                		<button type="button" class="btn btn-lg btn-success">4800 to Call</button>
-	                		<button type="button" class="btn btn-lg btn-info">Raise to:</button><input class="form-control form-control-inline input-lg small-width" type="number" id="raiseAmount" placeHolder="0"/>
-	                		<button type="button" class="btn btn-lg btn-warning">All In</button>
-	                	</p>
-	                </td>
-	              </tr>
-	            </tbody>
-	        </table>
-        </div>
-	    <div class="row" id="felt">
-        	<h2>Pot(s): 550</h2>
-        	<h2>Blind(s): 10/20/1</h2>
-        	<h2>Community:
-        	<span class="blacksuit">5♠ </span><span class="redsuit">8♥ </span><span class="redsuit">9♦ </span><span class="blacksuit">9♣ </span><span class="blacksuit">T♦ </span>
-        	</h2>
-        </div>
-
-  </body>
+	    <div class="row" id="felt"></div>
+	</body>
 </html>

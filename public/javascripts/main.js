@@ -34,4 +34,5 @@ requirejs.config({
 requirejs(['jquery', 'bootstrap', 'poker', 'peerActions', 'gameUI', 'gameController', 'jsx!components'],
 function($, bootstrap, poker, peerActions, gameUI, gameController, components) {    
     gameController.initialize(gameUI, poker, peerActions, components);
+    gameController.startApplication();
 });

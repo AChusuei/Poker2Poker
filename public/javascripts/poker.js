@@ -10,7 +10,8 @@ function(pokerHandEvaluator,   moment) {
 		this.deck = new playingCards();
 		this.handEvaluator = pokerHandEvaluator;
 		this.blindStructure = new BlindStructure(levels);
-		this.gameController = gameController; 
+		this.gameController = gameController;
+		this.button = false;
 	}
 	Table.prototype = {
 		initializePlayerPositions: function(players, startingStack) {
@@ -30,6 +31,7 @@ function(pokerHandEvaluator,   moment) {
 			this.button = Math.floor((Math.random() * this.players.length));
 			// Index of player to whom action is on.
 			this.currentPlayer = this.button;
+			this.players[this.button].button = true; 
 		},
 		getNumberOfPlayers: function() {
 			return this.players.length;
@@ -108,6 +110,7 @@ function(pokerHandEvaluator,   moment) {
 				player.liveBet = 0;
 				this.resetButton();
 			};
+			this.gameController.updateInterface();
 			this.promptNextPlayerToAct();
 		},
 		promptNextPlayerToAct: function() {
@@ -138,7 +141,7 @@ function(pokerHandEvaluator,   moment) {
 			var minimumRaiseDelta = ((callBet - maxNonCallBet) < minimumBet ? minimumBet : callBet - maxNonCallBet);
 			// The absolute value of the minimum raise.
 			var minimumRaise = Math.min(callBet + minimumRaiseDelta, player.liveBet + player.stack);
-			var actions = [Player.Action.FOLD, Player.Action.ALLIN];
+			var actions = [Player.Action.FOLD];
 			if (callBet === 0) {
 				actions.push(Player.Action.CHECK, Player.Action.BET);
 			} else if ((player.stack + player.liveBet) > callBet) {
@@ -147,6 +150,7 @@ function(pokerHandEvaluator,   moment) {
 					actions.push(Player.Action.RAISE);
 				};
 			};
+			actions.push(Player.Action.ALLIN);
 			return { 
 				callBet: callBet,
 				minimumRaise: minimumRaise,
@@ -343,6 +347,10 @@ function(pokerHandEvaluator,   moment) {
 				this.button += 1;
 			}
 			this.currentPlayer = this.button;
+			_.each(this.players, function(player) {
+				player.button = false;
+			})
+			this.players[this.button].button = true; 
 		},
 		findGameWinner: function() {
 			// Someone should have chips remaining, otherwise something REALLY REALLY wrong happened here.
@@ -514,9 +522,9 @@ function(pokerHandEvaluator,   moment) {
      	createBlindStructure : function(levels) { return new BlindStructure(levels); },
      	createTable : function(players, startingStack, levels) { return new Table(players, startingStack, levels); },
      	createPot : function(players) { return new Pot(); },
-     	startTournamentGame: function(players, startingStack, levels, gameController) {
+     	initializeTableForTournament: function(players, startingStack, levels, gameController) {
      		table = new Table(players, startingStack, levels, gameController);
-     		table.startTournamentGame();
+     		// table.startTournamentGame();
      		return table;
      	},
      	Player: { Action : Player.Action } ,

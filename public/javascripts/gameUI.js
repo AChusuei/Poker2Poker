@@ -20,11 +20,6 @@ function($,        gameController,   reactComponents) {
     });
 
     return {
-        // Tells UI to prompt this player to action. 
-        promptPlayerAction: function(options) {
-            // find dom element according to player. -- USE options
-            // change dom elements according to options.
-        },
         // Tells UI that something changed.
         conveyPlayerAction: function(player, action, amount) {
             
