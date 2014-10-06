@@ -11,7 +11,6 @@ function(pokerHandEvaluator,   moment) {
 		this.handEvaluator = pokerHandEvaluator;
 		this.blindStructure = new BlindStructure(levels);
 		this.gameController = gameController;
-		this.button = false;
 	}
 	Table.prototype = {
 		initializePlayerPositions: function(players, startingStack) {
@@ -24,6 +23,7 @@ function(pokerHandEvaluator,   moment) {
 			};
 			_.each(this.players, function(player) {
 				player.stack = startingStack;
+				player.button = false;
 			});
 		},
 		randomizeButton: function() {
