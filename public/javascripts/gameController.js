@@ -64,6 +64,9 @@ define(['underscore'], function() {
 			case MessageType.PlayerInformationResponse: 
 				setRemoteUserInformation(peerId, json);
 				break;
+			case MessageType.PlayerConnectionRequest:
+				connectToPeer(json.data.remotePeerId);
+				break;
 		}
 	};
 
@@ -99,8 +102,8 @@ define(['underscore'], function() {
 		});
 	};
 
-	var connectToPeer = function(remotePeerId) {
-		peerActions.connectToPeer(remotePeerId);
+	var connectToPeer = function(remotePeerId, propagate) {
+		peerActions.connectToPeer(remotePeerId, propagate);
 	}
 
 	var getRemotePlayers = function() {
@@ -136,6 +139,7 @@ define(['underscore'], function() {
 		PlayerInformationResponse: 'receivePlayerInformation',
 		PlayerActionRequest: 'requestPlayerAction',
 		PlayerActionResponse: 'receivePlayerAction',
+		PlayerConnectionRequest: 'requestPlayerConnection',
 	};
 
 	var updateInterface = function(options) {

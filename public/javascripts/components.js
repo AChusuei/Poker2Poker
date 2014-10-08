@@ -43,7 +43,7 @@ function(React,   gameController,   $) {
     var ConnectedPlayerList = React.createClass({
         connectAndAddPlayer: function(e) {
             var remotePeerId = this.refs.remotePeerId.getDOMNode().value.trim();
-            gameController.connectToPeer(remotePeerId);
+            gameController.connectToPeer(remotePeerId, true);
             this.refs.remotePeerId.getDOMNode().value = '';
         },
         render: function() {

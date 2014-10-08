@@ -23,13 +23,25 @@ define(['peer'], function(peer) {
 		});
 	};
 
-	var connectToPeer = function(peerId) {
+	var connectToPeer = function(peerId, propagate) {
 		// when we want to connect to peer ... 
 		initializeConnection(peer.connect(peerId));
 
 		// alert console that we've connected to remote peer.
         console.log('We connected to peer ' + connections[peerId].peer);
         gameController.updateConnectedPlayers();
+        // If this is the initiator of the connection, tell others to connect to this peer.
+        if (propagate) {
+	        var connectionsToNotify = _.filter(connections, function(connection) { return connection.peer != peerId; });
+	        if (connectionsToNotify && connectionsToNotify.length !== 0) {
+	        	_.each(connectionsToNotify, function(connection) {
+	        		connection.send({
+						type: 'requestPlayerConnection',
+						data: { remotePeerId: peerId },
+					});	
+	        	});
+	        }
+	    }
 	};
 
 	var initializeConnection = function(c) {
