@@ -112,11 +112,23 @@ define(['constants', 'underscore'], function(constants) {
 	};
 
 	var broadcastInterfaceUpdate = function() {
-		peerActions.sendMessageToAll({
-			type: MessageType.TableBroadcastRequest, 
-			data: JSON.stringify(table),
+		_.each(peerActions.getAllConnections(), function(connection) {
+			connection.send({
+				type: MessageType.TableBroadcastRequest, 
+				data: sanitizeTableForBroadcast(connection.peer),
+			});
 		});
 	};
+
+	var sanitizeTableForBroadcast = function(peerId) {
+		var cleanTable = JSON.parse(JSON.stringify(table));
+		_.each(cleanTable.players, function(player) {
+			if (player.peerId !== peerId) {
+				player.hand = null;
+			}
+		});
+		return JSON.stringify(cleanTable);
+	}
 
 	var broadcastGameStart = function() {
 		peerActions.sendMessageToAll({

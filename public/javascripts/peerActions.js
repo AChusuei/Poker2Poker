@@ -72,13 +72,7 @@ define(['peer'], function(peer) {
 	};
 
 	var getAllConnections = function(data) {
-		var c = [];
-		for (var key in connections) {
-		    if (connections.hasOwnProperty(key)) {
-		    	c.push(connections[key]);
-		    }
-		}
-		return c;
+		return _.values(connections);
 	};
 
     return {

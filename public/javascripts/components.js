@@ -113,6 +113,11 @@ function(React,   gameController,   $,        constants) {
 
     var PokerPlayer = React.createClass({
         render: function() {
+            var cards = [];
+            if (this.props.player.hand) {
+                cards.push(<Card card={this.props.player.hand[0]} />);
+                cards.push(<Card card={this.props.player.hand[1]} />);
+            }
             return (
                 <tr >
                     <td className="peerId"><code>{this.props.player.peerId}</code></td>
@@ -121,8 +126,7 @@ function(React,   gameController,   $,        constants) {
                         <DealerButton show={this.props.player.button} />
                     </td>
                     <td className="cards">
-                        <Card card={this.props.player.hand[0]} />
-                        <Card card={this.props.player.hand[1]} />
+                        {cards}
                     </td>
                     <td className="stack">{this.props.player.stack}</td>
                     <td className="liveBet">{this.props.player.liveBet}</td>

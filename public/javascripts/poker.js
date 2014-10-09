@@ -414,7 +414,7 @@ function(pokerHandEvaluator,   moment,   constants) {
     		return (_.keys(this.players).length !== 0);
     	},
     	makeEligible: function(player) {
-    		this.players[player.name] = player; 
+    		this.players[player.name] = true; 
     	},
     	isEligible: function(player) {
     		return (player.name in this.players);
