@@ -37,7 +37,11 @@ define(['underscore'], function() {
 				case Card.Rank[2]: return 'Two';
 				case Card.Rank.N: return 'Null';
 			}
-		}
+		},
+		getRankNamePlural: function() {
+			var suffix = (this.rank === Card.Rank[6] ? 'es' : 's');
+			return this.getRankName() + suffix;
+		},
 	};
 	Card.Rank = {
 		// Used for shorthand, so we can quickly instantiate cards
@@ -114,7 +118,7 @@ define(['underscore'], function() {
 				if (c !== 0) { 
 					ranks += ','; 
 				}
-				ranks += this.cards[c].rank;
+				ranks += this.cards[c].getRankName();
 			}
 			ranks += ')';
 			return ranks;
@@ -125,12 +129,30 @@ define(['underscore'], function() {
 					if (this.cards[0].rank === Card.Rank.Ace) {
 						return 'Royal flush of ' + this.suit + '. Damn.';
 					} else {
-						return this.cards[0].rank + ' high straight flush of ' + this.suit;
+						return this.cards[0].getRankName() + ' high straight flush of ' + this.suit;
 					}
+				case Hand.Rank.FourOfAKind: 
+					return 'Four ' + this.cards[0].getRankNamePlural() + ', ' + this.cards[4].getRankName() + ' kicker';
+				case Hand.Rank.FullHouse: 
+					return 'Full house, ' + this.cards[0].getRankNamePlural() + ' over ' + this.cards[3].getRankNamePlural();
 				case Hand.Rank.Flush:
-					return 'Flush ' + this.listCardRanks() + ' of ' + this.suit;
+					return this.cards[0].getRankName() + '-high flush ' + this.listCardRanks() + ' of ' + this.suit;
 				case Hand.Rank.Straight:
-					return this.cards[0].rank + ' high straight';
+					return this.cards[0].getRankName() + ' high straight';
+				case Hand.Rank.ThreeOfAKind: 
+					return 'Three ' + this.cards[0].getRankNamePlural() + ', ' 
+									+ this.cards[3].getRankName() + ' ' + this.cards[4].getRankName() + ' kicker';
+				case Hand.Rank.TwoPair: 
+					return 'Two pair, ' + this.cards[0].getRankNamePlural() 
+										+ ' and ' + this.cards[2].getRankNamePlural() 
+										+ ', ' + this.cards[4].getRankName() + ' kicker';
+				case Hand.Rank.OnePair: 
+					return 'One pair of ' + this.cards[0].getRankNamePlural() + ', ' 
+										+ this.cards[2].getRankName() + ', ' 
+										+ this.cards[3].getRankName() + ', ' 
+										+ this.cards[4].getRankName() + ' kicker';
+				case Hand.Rank.HighCard: 
+					return this.cards[0].getRankName() + '-high, ' + this.listCardRanks();
 			}
 		},
 	};
@@ -144,7 +166,9 @@ define(['underscore'], function() {
 	HandEvaluator.prototype = {
 		evaluateHand: function(cardSet) {
 			var sortedCards = this.sortCards(cardSet);
-			return this.findHand(sortedCards);
+			var hand = this.findHand(sortedCards);
+			console.log('hand: ', hand.toString());
+			return hand;
 		},
 		// Sorts card in rank order from highest to lowest
 		sortCards: function(cardSet) {

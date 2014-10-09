@@ -46,7 +46,7 @@ define(['poker', 'moment'], function(poker, moment) {
             this.poker = poker;
             var newPlayers = [];
             _.each(allPlayers, function(p) {
-                newPlayers.push(poker.createLocalPlayer(p.name, startingStack));
+                newPlayers.push(poker.createPlayer(p.name, '', startingStack));
             });
             this.table = poker.createTable(newPlayers, startingStack, levels);
             this.table.blindStructure.determineBlindLevel();
@@ -173,7 +173,7 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should make the button the small blind when it is heads up (two players)', function() {
             var newPlayers = [];
             _.each(_.sample(allPlayers, 2), function(p) {
-                newPlayers.push(poker.createLocalPlayer(p.name, startingStack));
+                newPlayers.push(poker.createPlayer(p.name, '', startingStack));
             });
             this.table = poker.createTable(newPlayers, startingStack, levels);
             this.table.blindStructure.determineBlindLevel();
@@ -647,7 +647,7 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should formulate base action options when it is heads up (two players)', function() {
             var newPlayers = [];
             _.each(_.sample(allPlayers, 2), function(p) {
-                newPlayers.push(poker.createLocalPlayer(p.name, startingStack));
+                newPlayers.push(poker.createPlayer(p.name, '', startingStack));
             });
             this.table = poker.createTable(newPlayers, startingStack, levels);
             this.table.blindStructure.determineBlindLevel();
@@ -779,8 +779,8 @@ define(['poker', 'moment'], function(poker, moment) {
     describe('A Pot', function() {
 
         beforeEach(function() {
-            this.boy = poker.createLocalPlayer('Alan', 3000);
-            this.girl = poker.createLocalPlayer('Christina', 5000);
+            this.boy = poker.createPlayer('Alan', '', 3000);
+            this.girl = poker.createPlayer('Christina', '', 5000);
             this.pot = poker.createPot();
         });        
 
@@ -876,7 +876,7 @@ define(['poker', 'moment'], function(poker, moment) {
         var smallBet = 50;
 
         beforeEach(function() {
-            this.player = poker.createLocalPlayer(name, startingStack);
+            this.player = poker.createPlayer(name, '', startingStack);
         });
 
         it('should be initialized properly', function() {

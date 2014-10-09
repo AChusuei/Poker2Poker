@@ -109,8 +109,6 @@ function(pokerHandEvaluator,   moment,   constants) {
 					this.resetButton();
 				};
 			}, this);
-			this.gameController.updateInterface();
-			this.gameController.broadcastInterfaceUpdate();
 			this.promptNextPlayerToAct();
 		},
 		promptNextPlayerToAct: function() {
@@ -118,6 +116,8 @@ function(pokerHandEvaluator,   moment,   constants) {
 			var options = this.formulateActionOptions(player);
 			var currentTable = this;
 			player.action = Player.Action.ToAct
+			this.gameController.updateInterface();
+			this.gameController.broadcastInterfaceUpdate();
 			this.gameController.promptPlayerAction(player, options, function(response) { 
 				currentTable.resolvePlayerAction(response); 
 			});			
@@ -184,8 +184,6 @@ function(pokerHandEvaluator,   moment,   constants) {
 		resolvePlayerAction: function(response) {
 			this.changePlayerState(response);
 			if (!this.isStreetOver()) {
-				this.gameController.updateInterface();
-				this.gameController.broadcastInterfaceUpdate();
 				this.promptNextPlayerToAct();
 			} else {
 				this.resolvePots();
@@ -324,21 +322,24 @@ function(pokerHandEvaluator,   moment,   constants) {
 				// If we have split pots, then everyone in this list has to be a winner
 				var highHand; 
 				_.chain(currentPot.players)
-					.difference(losers) // any players who've already lost will lose future pots
+					.difference(losers) // any players who've already lost will lose future pots and should not be considered
 					.each(function (player) {
+						// var sevenCards = this.communityCards.concat(player.hand);
+						var sevenCards = this.convertOldCards(this.communityCards.concat(player.hand));
+						var currentHand = this.handEvaluator.evaluateHand(sevenCards);
 						if (currentWinners.length > 0) {
-							var seven = this.communityCards.concat(player.hand);
-							var currentHand = this.handEvaluator.evaluateHand(seven);
 							var diff = currentHand.compare(highHand);
 							if (diff === 0) {
 								currentWinners.push(player);
 							} else if (diff > 0) {
-								losers.concat(currentWinners);
+								losers = losers.concat(currentWinners);
 								currentWinners = [player];
 								highHand = currentHand;
+							} else {
+								losers = losers.concat(player);
 							}
 						} else {
-							highHand = this.handEvaluator.evaluateHand(player.hand, this.communityCards);
+							highHand = currentHand;
 							currentWinners.push(player);
 						}
 					}, this);
@@ -347,6 +348,11 @@ function(pokerHandEvaluator,   moment,   constants) {
 					winner.stack += award;
 				});
 			}
+		},
+		convertOldCards: function(oldCards) { // need to make my own card deck ... 
+			return _.map(oldCards, function(oldCard) {
+				return this.handEvaluator.getCard(oldCard.rank, oldCard.suit);
+			}, this);
 		},
 		getRoundWinner: function() {
 			var survivors = _.filter(this.players, function(p) { return p.status === PlayerRoundStatus.IN; } );
@@ -413,6 +419,9 @@ function(pokerHandEvaluator,   moment,   constants) {
     	isEligible: function(player) {
     		return (player.name in this.players);
     	},
+    	listEligliblePlayers: function() {
+    		return _.reduce(_.keys(this.players), function(l, name) { return l + ', ' + name; });
+    	}
     }
 
 	/*
@@ -439,9 +448,13 @@ function(pokerHandEvaluator,   moment,   constants) {
 	/*
      Start Player object. Mostly information around remaining stack and betting methods.
      */
-	function Player(name, peerId) {
+	function Player(name, peerId, stack) {
 	 	this.name = name;
-		this.stack = 0;
+	 	if (stack) {
+	 		this.stack = stack;
+	 	} else {
+	 		this.stack = 0;
+	 	}
 		this.liveBet = 0;
 		this.peerId = peerId;
 	};
@@ -530,7 +543,7 @@ function(pokerHandEvaluator,   moment,   constants) {
     var table; 
 
     return {
-     	createPlayer : function(name, peerId) { return new Player(name, peerId); },
+     	createPlayer : function(name, peerId, stack) { return new Player(name, peerId, stack); },
      	createBlindStructure : function(levels) { return new BlindStructure(levels); },
      	createTable : function(players, startingStack, levels) { return new Table(players, startingStack, levels); },
      	createPot : function(players) { return new Pot(); },

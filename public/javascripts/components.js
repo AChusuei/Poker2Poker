@@ -187,7 +187,6 @@ function(React,   gameController,   $,        constants) {
         render: function() {
             var buttonType;
             switch (this.props.action) {
-                case PlayerAction.Check:
                 case PlayerAction.Bet:
                 case PlayerAction.Call:
                 case 'Win Hand':
@@ -203,6 +202,7 @@ function(React,   gameController,   $,        constants) {
                 case PlayerAction.AllIn:
                     buttonType = 'btn-warning' 
                     break;
+                case PlayerAction.Check:
                 case PlayerAction.ToAct:
                 case PlayerAction.YetToAct:
                     buttonType = 'btn-default' 
@@ -364,7 +364,7 @@ function(React,   gameController,   $,        constants) {
 
     var Pot = React.createClass({
         render: function() {
-            return (<h4>Pot: {this.props.amount} ({_.keys(this.props.players)})</h4>);
+            return (<h4>Pot: {this.props.amount} ({_.reduce(_.keys(this.props.players), function(l, name) { return l + ', ' + name; })})</h4>);
         },
     });
 
