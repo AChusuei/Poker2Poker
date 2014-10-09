@@ -1,5 +1,5 @@
-define(['pokerHandEvaluator', 'moment', 'underscore', 'playingCards'], 
-function(pokerHandEvaluator,   moment) {
+define(['pokerHandEvaluator', 'moment', 'constants', 'underscore', 'playingCards'], 
+function(pokerHandEvaluator,   moment,   constants) {
 
     /*
      Start table object regarding table position and dealing.
@@ -43,8 +43,7 @@ function(pokerHandEvaluator,   moment) {
 				} else {
 					this.currentPlayer += 1;
 				}
-			} while (this.currentLivePlayer().stack === 0 || 
-				     this.currentLivePlayer().action === Player.Action.FOLD);
+			} while (this.currentLivePlayer().stack === 0 || this.currentLivePlayer().action === Player.Action.FOLD);
 			return this.currentLivePlayer();
 		},
 		currentLivePlayer: function() {
@@ -69,12 +68,12 @@ function(pokerHandEvaluator,   moment) {
 		// Note that this sets the table such that the next live player should be UTG
 		postBlindsAndAntes: function() {
 			this.pots = [this.startPot()];
-			var blinds = this.blindStructure.determineBlindLevel();
+			this.blinds = this.blindStructure.determineBlindLevel();
 			var currentPot = this.pots[0]; 
 			// get antes from every player.
 			// TODO: find minimum ante.
 			_.each(this.players, function(player) {
-				currentPot.amount += player.ante(blinds.ante);
+				currentPot.amount += player.ante(this.blinds.ante);
 			}, this);
 			if (this.players.length === 2) { // We are heads up; 
 				// Button posts small blind.
@@ -87,8 +86,8 @@ function(pokerHandEvaluator,   moment) {
 				// Player after small blind posts big blind.
 				var bbPlayer = this.nextLivePlayer();
 			}
-			var sbBet = sbPlayer.postBlind(blinds.smallBlind, currentPot);
-			var bbBet = bbPlayer.postBlind(blinds.bigBlind, currentPot);
+			var sbBet = sbPlayer.postBlind(this.blinds.smallBlind, currentPot);
+			var bbBet = bbPlayer.postBlind(this.blinds.bigBlind, currentPot);
 		},
 		// One whole game. Winner is the last one standing.
 		startTournamentGame: function() {
@@ -103,20 +102,22 @@ function(pokerHandEvaluator,   moment) {
 		},
 		// Play one street of poker. 
 		startStreet: function() {
-			_.each(this.players, function(player) {
+			_.each(this.nonFoldedPlayers(), function(player) {
 				player.action = Player.Action.YETTOACT;
-			});
-			if (this.street > this.Street.PREFLOP) {
-				player.liveBet = 0;
-				this.resetButton();
-			};
+				if (this.street > this.Street.PREFLOP) {
+					player.liveBet = 0;
+					this.resetButton();
+				};
+			}, this);
 			this.gameController.updateInterface();
+			this.gameController.broadcastInterfaceUpdate();
 			this.promptNextPlayerToAct();
 		},
 		promptNextPlayerToAct: function() {
 			var player = this.nextLivePlayer();
 			var options = this.formulateActionOptions(player);
 			var currentTable = this;
+			player.action = Player.Action.ToAct
 			this.gameController.promptPlayerAction(player, options, function(response) { 
 				currentTable.resolvePlayerAction(response); 
 			});			
@@ -124,7 +125,6 @@ function(pokerHandEvaluator,   moment) {
 		formulateActionOptions: function(player) {
 			// With no previous action, the minimum amount a player can bet.
 			var minimumBet = this.blindStructure.getBlindLevel().bigBlind;
-			// console.log(this.blindStructure.getBlindLevel().bigBlind);
 			// The current bet required by all players who wish to stay in the hand.
 			var callBet = _.chain(this.players)
 			    .filter(function(p) { return p.action !== Player.Action.FOLD; } )
@@ -145,7 +145,11 @@ function(pokerHandEvaluator,   moment) {
 			if (callBet === 0) {
 				actions.push(Player.Action.CHECK, Player.Action.BET);
 			} else if ((player.stack + player.liveBet) > callBet) {
-				actions.push(Player.Action.CALL);
+				if (player.liveBet === callBet) { // big blind option check
+					actions.push(Player.Action.CHECK);
+				} else {
+					actions.push(Player.Action.CALL);
+				}
 				if (player.stack + player.liveBet > minimumRaise) {
 					actions.push(Player.Action.RAISE);
 				};
@@ -180,6 +184,8 @@ function(pokerHandEvaluator,   moment) {
 		resolvePlayerAction: function(response) {
 			this.changePlayerState(response);
 			if (!this.isStreetOver()) {
+				this.gameController.updateInterface();
+				this.gameController.broadcastInterfaceUpdate();
 				this.promptNextPlayerToAct();
 			} else {
 				this.resolvePots();
@@ -188,8 +194,9 @@ function(pokerHandEvaluator,   moment) {
 					this.startStreet();	
 				} else {
 					this.resolvePotWinners();
+					this.communityCards = [];
 					this.moveButton();
-					if (!findGameWinner()) {
+					if (!this.findGameWinner()) {
 						this.startRound(); 
 					} else {
 						// game is over we have a winner!
@@ -206,12 +213,24 @@ function(pokerHandEvaluator,   moment) {
 			var pot = this.getCurrentPot();
 			var amount = response.amount;
 			switch (response.action) {
-				case Player.Action.CHECK: player.check(); break;
-				case Player.Action.FOLD: player.fold(); break;
-				case Player.Action.BET: player.bet(amount, pot); break;
-				case Player.Action.CALL: player.call(amount, pot); break;
-				case Player.Action.RAISE: player.raise(amount, pot); break;
-				case Player.Action.ALLIN: player.allIn(pot); break;
+				case Player.Action.CHECK: 
+					player.check(); 
+					break;
+				case Player.Action.FOLD: 
+					player.fold(); 
+					break;
+				case Player.Action.BET: 
+					player.bet(amount, pot); 
+					break;
+				case Player.Action.CALL: 
+					player.call(amount, pot); 
+					break;
+				case Player.Action.RAISE: 
+					player.raise(amount, pot); 
+					break;
+				case Player.Action.ALLIN: 
+					player.allIn(pot); 
+					break;
 				default: 
 					console.log('what action is this?' + response.action); 
 					throw 'Don\'t recognize this action!';
@@ -236,7 +255,12 @@ function(pokerHandEvaluator,   moment) {
 				return (madeWager(player) && player.liveBet === highBet) ||
 				       (player.action === Player.Action.ALLIN && player.liveBet <= highBet)
 		    }, this);
-			return onlyOnePlayerLeft || restChecked || restCalledTheHighBetOrAllIn;
+		    var nonFoldedPlayersLimpedAndBigBlindCheckedOption = (
+		    	this.street === this.Street.PREFLOP && _.every(nonFoldedPlayers, function(player) { 
+					return (player.action === Player.Action.CHECK || player.action === Player.Action.CALL)
+			    })
+		    );
+			return onlyOnePlayerLeft || restChecked || restCalledTheHighBetOrAllIn || nonFoldedPlayersLimpedAndBigBlindCheckedOption;
 		},
 		nonFoldedPlayers: function() {
 			return _.filter(this.players, function(player) { 
@@ -328,17 +352,8 @@ function(pokerHandEvaluator,   moment) {
 			var survivors = _.filter(this.players, function(p) { return p.status === PlayerRoundStatus.IN; } );
 			return (survivors.length === 1 ? survivors[0] : null);
 		},
-		fakePlayRound: function() {
-			// Take random amount from each player. 
-			var amt = Math.floor((Math.random() * this.players.length));
-			_.each(this.players, function(player) { 
-				pots[0].amount += player.bet(amt);
-			});
-			// for now pick random player as winner. 
-			return Math.floor((Math.random() * this.players.length));
-		},
 		resetButton: function() {
-			this.currentPlayer = button; // reset first player to act.
+			this.currentPlayer = this.button; // reset first player to act.
 		},
 		moveButton: function() {
 			if (this.button === this.players.length - 1) {
@@ -424,9 +439,9 @@ function(pokerHandEvaluator,   moment) {
 	/*
      Start Player object. Mostly information around remaining stack and betting methods.
      */
-	function Player(name, stack, peerId) {
+	function Player(name, peerId) {
 	 	this.name = name;
-		this.stack = stack;
+		this.stack = 0;
 		this.liveBet = 0;
 		this.peerId = peerId;
 	};
@@ -440,11 +455,9 @@ function(pokerHandEvaluator,   moment) {
 		CALL: 'Call', // Player calls high bet, and has chips left.
 		RAISE: 'Raise', // Player makes at least a minimum raise, and has chips still left.
 		ALLIN: 'All-In', // Player pushes rest of their chips (regardless of bet, call, or raise)
+		ToAct: 'ToAct', // Player has been prompted to make an action.
 	};
 	Player.prototype = {
-		isLocal: function() {
-			return (this.peerId == null);
-		},
 		// Player checks. Nothing changes monetarily for player.
 		check: function() {
 			this.action = Player.Action.CHECK;
@@ -517,14 +530,12 @@ function(pokerHandEvaluator,   moment) {
     var table; 
 
     return {
-     	createLocalPlayer : function(name, stack) { return new Player(name, stack, null); },
-     	createRemotePlayer : function(name, peerId, stack) { return new Player(name, stack, peerId); },
+     	createPlayer : function(name, peerId) { return new Player(name, peerId); },
      	createBlindStructure : function(levels) { return new BlindStructure(levels); },
      	createTable : function(players, startingStack, levels) { return new Table(players, startingStack, levels); },
      	createPot : function(players) { return new Pot(); },
      	initializeTableForTournament: function(players, startingStack, levels, gameController) {
      		table = new Table(players, startingStack, levels, gameController);
-     		// table.startTournamentGame();
      		return table;
      	},
      	Player: { Action : Player.Action } ,

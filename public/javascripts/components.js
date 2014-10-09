@@ -1,9 +1,10 @@
-define(['React', 'gameController', 'jquery', 'underscore'], 
-function(React,   gameController,   $) {
+define(['React', 'gameController', 'jquery', 'constants', 'underscore'], 
+function(React,   gameController,   $,        constants) {
 
     var connectedPlayerTable;
     var felt;
     var pokerTable;
+    var PlayerAction = constants.PlayerAction;
 
     var ConnectedPlayerTable = React.createClass({
         getInitialState: function() {
@@ -14,9 +15,8 @@ function(React,   gameController,   $) {
         },
         startTournamentGame: function() {
             gameController.initializeTableForTournament();
-            // this.hideTable();
-            // $('#connectionDashboard').hide(); // move session starter to react
-            
+            hideConnectionDashboard();
+            gameController.broadcastGameStart();
         },
         render: function() {
             if (this.state.hide) return null;
@@ -85,9 +85,6 @@ function(React,   gameController,   $) {
         render: function() {
             var rows = [];
             _.each(this.state.players, function(player) {
-                if (!player.peerId) {
-                    player.peerId = 'you';
-                }
                 rows.push(<PokerPlayer key={player.peerId} player={player} />);
             });
             return(
@@ -190,24 +187,24 @@ function(React,   gameController,   $) {
         render: function() {
             var buttonType;
             switch (this.props.action) {
-                case 'Check':
-                case 'Bet':
-                case 'Call':
+                case PlayerAction.Check:
+                case PlayerAction.Bet:
+                case PlayerAction.Call:
                 case 'Win Hand':
                     buttonType = 'btn-success' 
                     break;
-                case 'Raise':
+                case PlayerAction.Raise:
                     buttonType = 'btn-info' 
                     break;
-                case 'Fold':
+                case PlayerAction.Fold:
                 case 'Muck Hand':
                     buttonType = 'btn-danger' 
                     break;
-                case 'All In':
+                case PlayerAction.AllIn:
                     buttonType = 'btn-warning' 
                     break;
-                case 'Action':
-                case 'Waiting To Act':
+                case PlayerAction.ToAct:
+                case PlayerAction.YetToAct:
                     buttonType = 'btn-default' 
                     break;
             };
@@ -282,33 +279,59 @@ function(React,   gameController,   $) {
     });
 
     var UserActions = React.createClass({
+        fold: function(e) {
+            gameController.submitPlayerAction(PlayerAction.Fold);
+        },
+        check: function(e) {
+            gameController.submitPlayerAction(PlayerAction.Check);
+        },
+        callBet: function(e) {
+            var amount = Number(this.refs.callAmount.getDOMNode().value.trim());
+            gameController.submitPlayerAction(PlayerAction.Call, amount);
+        },
+        bet: function(e) {
+            var amount = Number(this.refs.betAmount.getDOMNode().value.trim());
+            gameController.submitPlayerAction(PlayerAction.Bet, amount);
+        },
+        raise: function(e) {
+            var amount = Number(this.refs.raiseAmount.getDOMNode().value.trim());
+            gameController.submitPlayerAction(PlayerAction.Raise, amount);
+        },
+        allIn: function(e) {
+            gameController.submitPlayerAction(PlayerAction.AllIn);
+        },
         render: function() {
-            var buttons = [];
+            var elements = [];
             var callBet = this.props.options.callBet;
             var minimumRaise = this.props.options.minimumRaise;
             _.each(this.props.options.actions, function(action) {
                 switch (action) {
                     case 'Fold':
-                        buttons.push(<button type="button" className="btn btn-danger">{action}</button>); 
+                        elements.push(<button key="fold" type="button" className="btn btn-danger" onClick={this.fold}>{action}</button>); 
                         break;
                     case 'Check':
-                        buttons.push(<button type="button" className="btn btn-success">Check</button>);
+                        elements.push(<button key="check" type="button" className="btn btn-success" onClick={this.check}>Check</button>);
+                        break;
                     case 'Call':
-                        buttons.push(<button type="button" className="btn btn-success">{callBet} to Call</button>);
+                        elements.push(<button key="call" type="button" className="btn btn-success" onClick={this.callBet}>{callBet} to Call</button>);
+                        elements.push(<input key="callAmount" type="hidden" ref="callAmount" value={callBet}/>);
                         break;
                     case 'Bet':
+                        elements.push(<button key="bet" type="button" className="btn btn-info" onClick={this.bet}>{action}</button>);
+                        elements.push(<input key="betAmount" ref="betAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} type="number"/>);
+                        break;
                     case 'Raise':
-                        buttons.push(<button type="button" className="btn btn-info">{action}</button>);
-                        buttons.push(<input className="form-control form-control-inline small-width" min={minimumRaise} placeHolder={minimumRaise} type="number"/>);
+                        elements.push(<button key="raise" type="button" className="btn btn-info" onClick={this.raise}>{action}</button>);
+                        elements.push(<input key="raiseAmount" ref="raiseAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} type="number"/>);
                         break;
                     case 'All-In':
-                        buttons.push(<button type="button" className="btn btn-warning">{action}</button>);
+                        elements.push(<button key="allIn" type="button" className="btn btn-warning" onClick={this.allIn}>{action}</button>);
                         break;
                 }
-            });
+            }, this);
             return (
                 <td>
-                    {buttons}
+                    {elements}
                 </td>
             );
         }
@@ -328,8 +351,8 @@ function(React,   gameController,   $) {
         render: function() {
             if (!this.props.cards || this.props.cards.length === 0) return null;
             var cards = [];
-            _.each(this.props.cards, function(card) {
-                cards.push(<Card card={card} />);
+            _.each(this.props.cards, function(card, index) {
+                cards.push(<Card key={'communityCard' + index} card={card} />);
             });
             return (
                 <span>Community: 
@@ -381,7 +404,7 @@ function(React,   gameController,   $) {
         var localUserName = gameController.getLocalUserName();
         felt.setState({ 
             felt: {
-                blindLevel: table.blindStructure.getBlindLevel(),
+                blindLevel: table.blinds,
                 community: table.communityCards,
                 pots: table.pots,
                 player: _.find(table.players, function(player) {
@@ -392,31 +415,16 @@ function(React,   gameController,   $) {
         });
     }
 
-    var FELT = {
-        // blindLevel: { smallBlind: 15, bigBlind: 30, ante: 1, min: 10 },
-        // community: [{ rank: '5', suit: 'H' }, { rank: '8', suit: 'S' }, { rank: '9', suit: 'D' }, { rank: 'T', suit: 'C' }, { rank: '8', suit: 'D' }],
-        // pots: [
-        //     { amount: 500, players: { 'Linda Chusuei': true, 'Mary Rose Cook': true, 'Max McCrea': true, 'Christina Park': true }},
-        //     { amount: 250, players: { 'Linda Chusuei': true, 'Mary Rose Cook': true, 'Christina Park': true }},
-        //     { amount: 50, players: { 'Linda Chusuei': true, 'Mary Rose Cook': true}},
-        // ]
+    var hideConnectionDashboard = function() {
+        connectedPlayerTable.hideTable();
+        // $('#connectionDashboard').hide(); // move session starter to react
     }
-
-    var PLAYERS = [
-        { peerId: '41t73odr7fuvj9k9', name: 'Linda Chusuei', stack: 26000,    button: false, cards: [{ rank: 'A', suit: 'H' }, { rank: 'K', suit: 'S' }], action: 'Check' }, 
-        { peerId: '523vasdfhsdf24ts', name: 'Mary Rose Cook', stack: 25000,   button: false, cards: [{ rank: 'J', suit: 'S' }, { rank: 'T', suit: 'C' }], action: 'Raise' },
-        { peerId: '121246234bzds32d', name: 'Max McCrea', stack: 5000,        button: false, cards: [{ rank: '7', suit: 'D' }, { rank: 'Q', suit: 'C' }], action: 'Fold' },
-        // { peerId: 'vjklt5wuhivhd7vi', name: 'Alan O\'Donnell', stack: 14000,  button: false, cards: [{ rank: '5', suit: 'D' }, { rank: '5', suit: 'C' }], action: 'Call' },
-        // { peerId: 'vhckiv68v7w7mn29', name: 'Alan Chusuei', stack: 8000,      button: false, cards: [{ rank: 'J', suit: 'H' }, { rank: '6', suit: 'S' }], action: 'All In' },
-        // { peerId: '23453asdy34uaww4', name: 'Liuda Nikolaeva', stack: 800,    button: false, cards: [{ rank: 'K', suit: 'C' }, { rank: 'K', suit: 'D' }], action: 'Action' },
-        // { peerId: 'bngmphajpgiaiogf', name: 'Phil Ivey', stack: 250000,       button: false, cards: [{ rank: '8', suit: 'D',}, { rank: '9', suit: 'D' }], action: 'Muck Hand' },
-        // { peerId: 'apgahgaphg23asdf', name: 'Annette Obrestad', stack: 97000, button: true,  cards: [{ rank: '2', suit: 'C' }, { rank: '3', suit: 'D' }], action: 'Fold' },
-    ];
 
     return {
         renderConnectedPlayerTable: renderConnectedPlayerTable,
         updateConnectedPlayerTable: updateConnectedPlayerTable,
         renderPokerPlayerTable: renderPokerPlayerTable,
         renderFelt: renderFelt,
+        hideConnectionDashboard: hideConnectionDashboard, 
     }
 });

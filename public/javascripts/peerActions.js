@@ -23,6 +23,10 @@ define(['peer'], function(peer) {
 		});
 	};
 
+	var getPeerId = function() {
+		return peer.id;
+	}
+
 	var connectToPeer = function(peerId, propagate) {
 		// when we want to connect to peer ... 
 		initializeConnection(peer.connect(peerId));
@@ -62,11 +66,9 @@ define(['peer'], function(peer) {
 	};
 
 	var sendMessageToAll = function(data) {
-		for (var key in connections) {
-		    if (connections.hasOwnProperty(key)) {
-		    	connections[key].send(data);
-		    }
-		}
+		_.each(connections, function(connection) {
+			connection.send(data);
+		});
 	};
 
 	var getAllConnections = function(data) {
@@ -81,6 +83,7 @@ define(['peer'], function(peer) {
 
     return {
     	startSession: startSession,
+    	getPeerId: getPeerId,
     	connectToPeer: connectToPeer,
     	sendMessage: sendMessage,
     	sendMessageToAll: sendMessageToAll,

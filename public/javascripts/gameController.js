@@ -1,4 +1,4 @@
-define(['underscore'], function() {
+define(['constants', 'underscore'], function(constants) {
 
 	var gameUI;
 	var poker;
@@ -8,6 +8,8 @@ define(['underscore'], function() {
 	var userName;
 	var remotePlayerInformation = {};
 	var table;
+
+	var MessageType = constants.MessageType;
 
 	var startApplication = function() {
 		// components.renderSessionStarter();
@@ -31,16 +33,16 @@ define(['underscore'], function() {
             remotePeerId: player.peerId,
             callBack: callBack, 
         };
-		if (player.peerId) {
+		if (player.peerId !== peerActions.getPeerId()) { // this player is remote - send message
 	        promptRemotePlayerAction(player.peerId, options);
-		} else {
+		} else { // this player is local, alter UI
 			updateInterface(options);
 		}
 	};
 
 	var submitPlayerAction = function(action, amount) {
         var data = { action: action, amount: amount };
-        if (resolveRemotePlayerAction.remotePeerId) {
+        if (resolveRemotePlayerAction.remotePeerId !== peerActions.getPeerId()) {
             conveyRemotePlayerAction(resolveRemotePlayerAction.remotePeerId, data);                 
         } else {
             resolveRemotePlayerAction.callBack(data);
@@ -53,7 +55,7 @@ define(['underscore'], function() {
 				resolveRemotePlayerAction = {
 		            remotePeerId: peerId,
 		        };
-				gameUI.promptPlayerAction(json.data.options);
+				updateInterface(json.data.options);
 				break;
 			case MessageType.PlayerActionResponse: 
 				resolveRemotePlayerAction.callBack(json.data.response);
@@ -66,6 +68,13 @@ define(['underscore'], function() {
 				break;
 			case MessageType.PlayerConnectionRequest:
 				connectToPeer(json.data.remotePeerId);
+				break;
+			case MessageType.TableBroadcastRequest:
+				table = JSON.parse(json.data);
+				updateInterface();
+				break;
+			case MessageType.GameStartBroadcastRequest:
+				components.hideConnectionDashboard();
 				break;
 		}
 	};
@@ -98,7 +107,20 @@ define(['underscore'], function() {
 	var conveyRemotePlayerAction = function(peerId, response) {
 		peerActions.sendMessage(peerId, { 
 			type: MessageType.PlayerActionResponse, 
-			data: { response : response },  
+			data: { response: response },  
+		});
+	};
+
+	var broadcastInterfaceUpdate = function() {
+		peerActions.sendMessageToAll({
+			type: MessageType.TableBroadcastRequest, 
+			data: JSON.stringify(table),
+		});
+	};
+
+	var broadcastGameStart = function() {
+		peerActions.sendMessageToAll({
+			type: MessageType.GameStartBroadcastRequest,
 		});
 	};
 
@@ -113,7 +135,7 @@ define(['underscore'], function() {
         	if (connection.peer in remotePlayerInformation) {
         		userName = remotePlayerInformation[connection.peer].data.userName;
         	}
-        	players.push(poker.createRemotePlayer(userName, connection.peer));
+        	players.push(poker.createPlayer(userName, connection.peer));
         });
         return players;
 	}
@@ -125,7 +147,7 @@ define(['underscore'], function() {
             { smallBlind: 25, bigBlind: 50, ante: 3, min: 10 }
         ];
         var players = getRemotePlayers();
-        players.push(poker.createLocalPlayer(userName));
+        players.push(poker.createPlayer(userName, peerActions.getPeerId()));
         table = poker.initializeTableForTournament(players, 5000, levels, this);
         table.startTournamentGame();
 	};
@@ -133,14 +155,6 @@ define(['underscore'], function() {
 	var signalGameUI = function(action, info) {
 		gameUI.signal(action, info);
 	}
-
-	var MessageType = {
-		PlayerInformationRequest: 'requestPlayerInformation',
-		PlayerInformationResponse: 'receivePlayerInformation',
-		PlayerActionRequest: 'requestPlayerAction',
-		PlayerActionResponse: 'receivePlayerAction',
-		PlayerConnectionRequest: 'requestPlayerConnection',
-	};
 
 	var updateInterface = function(options) {
 		components.renderPokerPlayerTable(table.players);
@@ -166,6 +180,8 @@ define(['underscore'], function() {
 		getUserName: getUserName,
 		getLocalUserName: getLocalUserName,
 		updateInterface: updateInterface,
+		broadcastInterfaceUpdate: broadcastInterfaceUpdate,
+		broadcastGameStart: broadcastGameStart,
 	};
 
 });

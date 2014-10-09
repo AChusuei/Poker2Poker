@@ -16,7 +16,7 @@ requirejs.config({
     paths: {
     	jquery: 'http://code.jquery.com/jquery-1.11.0.min',
         bootstrap: 'http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min',
-        peer: 'http://cdn.peerjs.com/0.3/peer.min',
+        // peer: 'http://cdn.peerjs.com/0.3/peer.min',
         React: 'http://fb.me/react-with-addons-0.11.1',
         JSXTransformer: 'JSXTransformer-0.11.1',
         jsx: 'jsx',
