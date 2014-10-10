@@ -254,7 +254,7 @@ function(React,   gameController,   $,        constants) {
             var options;
             if (this.props.options) {
                 options = (
-                    <UserActions options={this.props.options} />
+                    <UserActions options={this.props.options} liveBet={this.props.player.liveBet}/>
                 );
             }
             return (
@@ -307,6 +307,7 @@ function(React,   gameController,   $,        constants) {
         render: function() {
             var elements = [];
             var callBet = this.props.options.callBet;
+            var deltaBet = callBet - this.props.liveBet;
             var minimumRaise = this.props.options.minimumRaise;
             _.each(this.props.options.actions, function(action) {
                 switch (action) {
@@ -317,7 +318,7 @@ function(React,   gameController,   $,        constants) {
                         elements.push(<button key="check" type="button" className="btn btn-success" onClick={this.check}>Check</button>);
                         break;
                     case 'Call':
-                        elements.push(<button key="call" type="button" className="btn btn-success" onClick={this.callBet}>{callBet} to Call</button>);
+                        elements.push(<button key="call" type="button" className="btn btn-success" onClick={this.callBet}>{deltaBet} to call ({callBet} total)</button>);
                         elements.push(<input key="callAmount" type="hidden" ref="callAmount" value={callBet}/>);
                         break;
                     case 'Bet':
