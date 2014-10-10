@@ -70,7 +70,7 @@ define(['constants', 'underscore'], function(constants) {
 				connectToPeer(json.data.remotePeerId);
 				break;
 			case MessageType.TableBroadcastRequest:
-				table = JSON.parse(json.data);
+				table = json.data;
 				updateInterface();
 				break;
 			case MessageType.GameStartBroadcastRequest:
@@ -127,7 +127,7 @@ define(['constants', 'underscore'], function(constants) {
 				player.hand = null;
 			}
 		});
-		return JSON.stringify(cleanTable);
+		return cleanTable;
 	}
 
 	var broadcastGameStart = function() {
@@ -169,8 +169,9 @@ define(['constants', 'underscore'], function(constants) {
 	}
 
 	var updateInterface = function(options) {
-		components.renderPokerPlayerTable(table.players);
-        components.renderFelt(table, options);
+		var clone = sanitizeTableForBroadcast(peerActions.getPeerId());
+		components.renderPokerPlayerTable(clone.players);
+        components.renderFelt(clone, options);
 	}
 
 	return {
