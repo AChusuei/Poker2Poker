@@ -309,6 +309,7 @@ function(React,   gameController,   $,        constants) {
             var callBet = this.props.options.callBet;
             var deltaBet = callBet - this.props.liveBet;
             var minimumRaise = this.props.options.minimumRaise;
+            var callMessage = deltaBet + ' to call' + (callBet !== deltaBet ? ' (' + callBet + ' total)' : '');
             _.each(this.props.options.actions, function(action) {
                 switch (action) {
                     case 'Fold':
@@ -318,7 +319,7 @@ function(React,   gameController,   $,        constants) {
                         elements.push(<button key="check" type="button" className="btn btn-success" onClick={this.check}>Check</button>);
                         break;
                     case 'Call':
-                        elements.push(<button key="call" type="button" className="btn btn-success" onClick={this.callBet}>{deltaBet} to call ({callBet} total)</button>);
+                        elements.push(<button key="call" type="button" className="btn btn-success" onClick={this.callBet}>{callMessage}</button>);
                         elements.push(<input key="callAmount" type="hidden" ref="callAmount" value={callBet}/>);
                         break;
                     case 'Bet':

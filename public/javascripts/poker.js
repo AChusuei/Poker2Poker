@@ -126,10 +126,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 			// With no previous action, the minimum amount a player can bet.
 			var minimumBet = this.blindStructure.getBlindLevel().bigBlind;
 			// The current bet required by all players who wish to stay in the hand.
-			var callBet = _.chain(this.players)
-			    .filter(function(p) { return p.action !== Player.Action.FOLD; } )
-				.max(function(p) { return p.liveBet; }, this)
-				.value().liveBet;
+			var callBet = this.getCurrentCallBet();
 			// Calculates the minimum marginal additional amount needed for a raise.
 			var maxNonCallBet = _.chain(this.players) // Figures out the highest bet
 			    .filter(function(p) { return p.action != Player.Action.FOLD && p.liveBet < callBet; } )
@@ -161,6 +158,12 @@ function(pokerHandEvaluator,   moment,   constants) {
 				actions: actions,
 			};
 		},
+		getCurrentCallBet: function() {
+			return _.chain(this.players)
+			    .filter(function(p) { return p.action !== Player.Action.FOLD; } )
+				.max(function(p) { return p.liveBet; }, this)
+				.value().liveBet;
+		},
 		dealCommunityCards: function() {
 			switch (this.street) {
 				case this.Street.FLOP:
@@ -175,6 +178,11 @@ function(pokerHandEvaluator,   moment,   constants) {
 					break;
 			}
 		},
+		dealAllCommunityCardsToRiver: function() {
+			while (this.street++ !== this.Street.SHOWDOWN) {
+				this.dealCommunityCards();
+			}
+		},
 		qa_dealAllCommunityCards: function() {
 			this.communityCards = [];
 			for (c = 0; c < 5; c++) {
@@ -187,20 +195,34 @@ function(pokerHandEvaluator,   moment,   constants) {
 				this.promptNextPlayerToAct();
 			} else {
 				this.resolvePots();
-				if (++this.street < this.Street.SHOWDOWN && this.nonFoldedPlayers().length > 1) {
-					this.dealCommunityCards();
-					this.startStreet();	
+				if (this.standUp()) {
+					this.dealAllCommunityCardsToRiver();
+					this.resolveRound();
+				} else if (++this.street === this.Street.SHOWDOWN || this.nonFoldedPlayers().length === 1) {
+					this.resolveRound();
 				} else {
-					this.resolvePotWinners();
-					this.communityCards = [];
-					this.moveButton();
-					if (!this.findGameWinner()) {
-						this.startRound(); 
-					} else {
-						// game is over we have a winner!
-						alert('Game winner is ' + findGameWinner());
-					}
+					this.dealCommunityCards();
+					this.startStreet();
 				}
+			}
+		},
+		// You know when poker players stand up when they are all in?
+		// The purpose of this function is to determine if that moment has arrived ... 
+		standUp: function() { 
+			var nonFoldedPlayers = this.nonFoldedPlayers();
+			var nonFoldedAllInPlayers = this.nonFoldedAllInPlayers();
+			// only 0 or 1 players that haven't folded are all in. 
+			return ((nonFoldedAllInPlayers.length + 1) >= nonFoldedPlayers.length);
+		},
+		resolveRound: function() {
+			this.resolvePotWinners();
+			this.communityCards = [];
+			this.moveButton();
+			if (!this.findGameWinner()) {
+				this.startRound(); 
+			} else {
+				// game is over we have a winner!
+				alert('Game winner is ' + findGameWinner());
 			}
 		},
 		getCurrentPot: function() {
@@ -219,21 +241,33 @@ function(pokerHandEvaluator,   moment,   constants) {
 					break;
 				case Player.Action.BET: 
 					player.bet(amount, pot); 
+					this.changeShowdownPlayer(player);
 					break;
 				case Player.Action.CALL: 
 					player.call(amount, pot); 
 					break;
 				case Player.Action.RAISE: 
-					player.raise(amount, pot); 
+					player.raise(amount, pot);
+					this.changeShowdownPlayer(player);
 					break;
 				case Player.Action.ALLIN: 
-					player.allIn(pot); 
+					player.allIn(pot);
+					if (player.liveBet > this.getCurrentCallBet()) {
+						this.changeShowdownPlayer(player); // all in raise
+					}
 					break;
 				default: 
 					console.log('what action is this?' + response.action); 
 					throw 'Don\'t recognize this action!';
 					break;
 			}
+		},
+		// when a player bets or raises in a way that requires a call, they are the first to show, regardless of table position 
+		changeShowdownPlayer: function(playerToFlip) {
+			_.each(this.players, function(player) {
+				player.flip = false;
+			});
+			playerToFlip.flip = true;
 		},
 		isStreetOver: function() {
 			var nonFoldedPlayers = this.nonFoldedPlayers();
@@ -265,6 +299,11 @@ function(pokerHandEvaluator,   moment,   constants) {
 				return player.action !== Player.Action.FOLD;
 		    });
 		},
+		nonFoldedAllInPlayers: function() {
+			return _.filter(this.nonFoldedPlayers(), function(player) { 
+				return player.action === Player.Action.ALLIN && player.liveBet > 0;
+		    });
+		},
 		foldedPlayers: function() {
 			return _.filter(this.players, function(player) { 
 				return player.action === Player.Action.FOLD;
@@ -284,10 +323,8 @@ function(pokerHandEvaluator,   moment,   constants) {
 		resolvePots: function() {
 			var nonFoldedPlayers = this.nonFoldedPlayers();
 			// Only create side pots if we have all in players with liveBets still in play.
-			// Note that the liveBet is what we decrement to ensure that a player is as eligile for as many pots as possible.
-			var nonFoldedAllInPlayers = _.filter(nonFoldedPlayers, function(player) { 
-				return player.action === Player.Action.ALLIN && player.liveBet > 0;
-		    });
+			// Note that the liveBet is what we decrement to ensure that a player is as eligible for as many pots as possible.
+			var nonFoldedAllInPlayers = this.nonFoldedAllInPlayers();
 		    if (nonFoldedAllInPlayers.length > 0) {
 				var currentPot = this.getCurrentPot();
 				var sidePot = this.startPot();
@@ -312,6 +349,9 @@ function(pokerHandEvaluator,   moment,   constants) {
 			}
 		},
 		resolvePotWinners: function() {
+			// Need to order the list of players evaluated based on the betting at the end 
+
+			// If we have split pots, then everyone in this list has to be a winner
 			var currentWinners = [];
 			var losers = this.foldedPlayers();
 			while (this.pots.length > 0) {
@@ -319,12 +359,13 @@ function(pokerHandEvaluator,   moment,   constants) {
 				if (currentPot.amount === 0) {
 					continue;
 				}; 
-				// If we have split pots, then everyone in this list has to be a winner
 				var highHand; 
 				_.chain(currentPot.players)
+					.sortBy(function (player) { return !player.flip; })
 					.difference(losers) // any players who've already lost will lose future pots and should not be considered
 					.each(function (player) {
-						// var sevenCards = this.communityCards.concat(player.hand);
+						// var sevenCards = this.communityCards.concat(player.hand); 
+						// the card deck i'm using sucks. I should just build one of my own, the fact that I have to use this parser =P~~
 						var sevenCards = this.convertOldCards(this.communityCards.concat(player.hand));
 						var currentHand = this.handEvaluator.evaluateHand(sevenCards);
 						if (currentWinners.length > 0) {
@@ -414,7 +455,7 @@ function(pokerHandEvaluator,   moment,   constants) {
     		return (_.keys(this.players).length !== 0);
     	},
     	makeEligible: function(player) {
-    		this.players[player.name] = true; 
+    		this.players[player.name] = player; // problem is that player information is serialized in these pots ... 
     	},
     	isEligible: function(player) {
     		return (player.name in this.players);
