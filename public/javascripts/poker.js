@@ -374,12 +374,17 @@ function(pokerHandEvaluator,   moment,   constants) {
 				.sortBy(function (player) { return player.button; }) // any players that need to flip should be first
 				.difference(potResolver.losers) // any players who've already lost will lose future pots and should not be considered
 				.value(); // how to best hold players in here?
-			if (potResolver.eligiblePlayers[0].flip) { // played who got called MUST show
-				potResolver.currentEligiblePlayer = potResolver.eligiblePlayers.shift();
-				this.determineIfCurrentPlayerIsWinner(potResolver);
-				potResolver.currentEligiblePlayer.markHandShown(true);
+			if (potResolver.eligiblePlayers.length === 1) {
+				potResolver.winners = potResolver.eligiblePlayers;
+				this.awardPotToWinnerAndMoveToNextPot(potResolver);
+			} else {
+				if (potResolver.eligiblePlayers[0].flip) { // played who got called MUST show
+					potResolver.currentEligiblePlayer = potResolver.eligiblePlayers.shift();
+					this.determineIfCurrentPlayerIsWinner(potResolver);
+					potResolver.currentEligiblePlayer.markHandShown(true);
+				}
+				this.promptPlayerToShowOrMuckHand(potResolver);
 			}
-			this.promptPlayerToShowOrMuckHand(potResolver);
 		},
 		determineIfCurrentPlayerIsWinner: function(potResolver) {
 			var player = potResolver.currentEligiblePlayer;
@@ -428,17 +433,20 @@ function(pokerHandEvaluator,   moment,   constants) {
 			if (potResolver.eligiblePlayers.length > 0) {
 				this.promptPlayerToShowOrMuckHand(potResolver);
 			} else {
-				var resolvedPot = this.pots[potResolver.potIndex];
-				resolvedPot.players = potResolver.winners;
-				resolvedPot.award();
-				potResolver.potIndex--;
-				this.gameController.updateInterface();
-				this.gameController.broadcastInterfaceUpdate();
-				if (potResolver.potIndex > -1) {
-					this.resolveContestedPot(potResolver);
-				} else { // all pots have been awarded, move to the next hand!
-					this.endRound();
-				}
+				this.awardPotToWinnerAndMoveToNextPot(potResolver);
+			}
+		},
+		awardPotToWinnerAndMoveToNextPot: function(potResolver) {
+			var resolvedPot = this.pots[potResolver.potIndex];
+			resolvedPot.players = potResolver.winners;
+			resolvedPot.award();
+			potResolver.potIndex--;
+			this.gameController.updateInterface();
+			this.gameController.broadcastInterfaceUpdate();
+			if (potResolver.potIndex > -1) {
+				this.resolveContestedPot(potResolver);
+			} else { // all pots have been awarded, move to the next hand!
+				this.endRound();
 			}
 		},
 		endRound: function() {

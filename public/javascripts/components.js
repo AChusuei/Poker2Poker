@@ -395,9 +395,9 @@ function(React,   gameController,   $,        constants) {
         render: function() {
             var message = (this.props.pot.awardMessage 
                 ? this.props.pot.awardMessage
-                : _.map(this.props.pot.players, function(player) { return player.name; })
+                : _.map(this.props.pot.players, function(player) { return player.name; }) + ' are contending for this pot'
             );
-            return (<h4>Pot: {this.props.pot.amount}{' -> ' +message}</h4>);
+            return (<h4>Pot: {this.props.pot.amount}{' -> ' + message}</h4>);
         },
     });
 
