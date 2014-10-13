@@ -9,7 +9,7 @@ define(['peer'], function(peer) {
 	    peer = new Peer({key: '78u36fbxn6f7p66r'});
 		peer.on('open', function(id) {
 			console.log('My peer ID is: ' + id);
-			gameController.signalGameUI('open', {id: id});
+			gameController.updateConnectionDashboard(id);
 		});
 		peer.on('connection', function(remoteConnection) {
 			// when remote wants to connect to us...
@@ -19,7 +19,7 @@ define(['peer'], function(peer) {
 		});
 		peer.on('close', function() {
 	    	console.log('peer ' + this.id + ' was closed.');
-	    	gameController.signalGameUI('close', { peerId : this.id });
+	    	// gameController.signalGameUI('close', { peerId : this.id });
 		});
 	};
 

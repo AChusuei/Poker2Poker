@@ -1,10 +1,33 @@
 define(['React', 'gameController', 'jquery', 'constants', 'underscore'], 
 function(React,   gameController,   $,        constants) {
 
+    var connectionDashboard;
     var connectedPlayerTable;
     var felt;
     var pokerTable;
     var PlayerAction = constants.PlayerAction;
+
+    var ConnectionDashboard = React.createClass({
+        getInitialState: function() {
+            return {
+                userPeerId: null,
+            };
+        },
+        startSession: function() {
+            var userName = this.refs.userName.getDOMNode().value.trim();
+            gameController.startSession(userName);
+        }, 
+        render: function() {
+            var disabled = this.state.userPeerId;
+            var message = (this.state.userPeerId ? 'Session Started' : 'Start Session'); // disabled={disableStartGameButton}
+            return (
+                <div className="row" className="col-md-12">
+                    <h2><input className="form-control form-control-inline" type="text" id="userName" ref="userName" placeholder="Who are you?" disabled={disabled}/>
+                    <button type="button" className="btn btn-success" id="startSession" onClick={this.startSession} disabled={disabled}>{message}</button> -> <span id="userPeerId">{this.state.userPeerId}</span></h2>
+                </div>
+            );
+        }
+    });
 
     var ConnectedPlayerTable = React.createClass({
         getInitialState: function() {
@@ -417,6 +440,15 @@ function(React,   gameController,   $,        constants) {
         }
     });
 
+    var renderConnectionDashboard = function() {
+        connectionDashboard = React.renderComponent(<ConnectionDashboard />, document.getElementById('connectionDashboard'));
+    }
+
+    var updateConnectionDashboard = function(peerId) {
+        connectionDashboard.setState({ userPeerId: peerId });
+        renderConnectedPlayerTable();
+    }
+
     var renderConnectedPlayerTable = function() {
         connectedPlayerTable = React.renderComponent(<ConnectedPlayerTable players={[]}/>, document.getElementById('connectedPlayers'));
     }
@@ -455,10 +487,13 @@ function(React,   gameController,   $,        constants) {
     }
 
     return {
+        renderConnectionDashboard: renderConnectionDashboard,
+        updateConnectionDashboard: updateConnectionDashboard,
+        hideConnectionDashboard: hideConnectionDashboard,
         renderConnectedPlayerTable: renderConnectedPlayerTable,
         updateConnectedPlayerTable: updateConnectedPlayerTable,
         renderPokerPlayerTable: renderPokerPlayerTable,
         renderFelt: renderFelt,
-        hideConnectionDashboard: hideConnectionDashboard, 
+
     }
 });

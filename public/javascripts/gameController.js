@@ -12,7 +12,7 @@ define(['constants', 'underscore'], function(constants) {
 	var MessageType = constants.MessageType;
 
 	var startApplication = function() {
-		// components.renderSessionStarter();
+		components.renderConnectionDashboard();
 	}
 
 	var startSession = function(u) {
@@ -164,8 +164,8 @@ define(['constants', 'underscore'], function(constants) {
         table.startTournamentGame();
 	};
 
-	var signalGameUI = function(action, info) {
-		gameUI.signal(action, info);
+	var updateConnectionDashboard = function(peerId) {
+		components.updateConnectionDashboard(peerId);
 	}
 
 	var updateInterface = function(options) {
@@ -183,7 +183,6 @@ define(['constants', 'underscore'], function(constants) {
 		},
 		startApplication: startApplication,
 		startSession: startSession,
-		signalGameUI: signalGameUI,
 		updateConnectedPlayers: updateConnectedPlayers,
 		promptPlayerAction: promptPlayerAction,
 		submitPlayerAction: submitPlayerAction,
@@ -195,6 +194,7 @@ define(['constants', 'underscore'], function(constants) {
 		updateInterface: updateInterface,
 		broadcastInterfaceUpdate: broadcastInterfaceUpdate,
 		broadcastGameStart: broadcastGameStart,
+		updateConnectionDashboard: updateConnectionDashboard,
 	};
 
 });

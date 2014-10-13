@@ -3,8 +3,8 @@ function($,        gameController,   reactComponents) {
 
     // UI triggered events
     $('#startSession').click(function() {
-        var userName = $('#userName').val();
-        gameController.startSession(userName);
+        // var userName = $('#userName').val();
+        // gameController.startSession(userName);
     });
     $('#endGame').click(function() {
         // peerActions.getSession().stopPeer();
@@ -61,12 +61,12 @@ function($,        gameController,   reactComponents) {
                               ';
             switch (action) {
                 case 'open': 
-                    $('#userPeerId').text(info.id);
-                    $('#startSession').attr('disabled', 'disabled');
-                    var name = $('#userName').val();
-                    $('#userName').attr('disabled', 'disabled');
-                    $('#startSession').text('Session Started');
-                    connectedPlayerTable = reactComponents.renderConnectedPlayerTable();
+                    // $('#userPeerId').text(info.id);
+                    // $('#startSession').attr('disabled', 'disabled');
+                    // var name = $('#userName').val();
+                    // $('#userName').attr('disabled', 'disabled');
+                    // $('#startSession').text('Session Started');
+                    // connectedPlayerTable = reactComponents.renderConnectedPlayerTable();
                     // $('#connectedPlayerList').append(newPeerRow);
                     break;
                 case 'connection':
