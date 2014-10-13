@@ -53,9 +53,8 @@ function(pokerHandEvaluator,   moment,   constants) {
 			this.deck.shuffle();
 			// clear all player hands 
 			_.each(this.players, function(p) {
-				p.hand = [];
+				p.resetForNewRound();
 			}, this);
-			
 			_.chain(this.players)
 			     // only deal cards to players with chips remaining
 			    .filter(function(p) { return p.stack > 0; } )
@@ -104,6 +103,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 		startStreet: function() {
 			_.each(this.nonFoldedPlayers(), function(player) {
 				player.action = Player.Action.YETTOACT;
+				this.resetShowdownPlayer();
 				if (this.street > this.Street.PREFLOP) {
 					player.liveBet = 0;
 					this.resetButton();
@@ -194,12 +194,12 @@ function(pokerHandEvaluator,   moment,   constants) {
 			if (!this.isStreetOver()) {
 				this.promptNextPlayerToAct();
 			} else {
-				this.resolvePots();
+				this.reconcilePots();
 				if (this.standUp()) {
 					this.dealAllCommunityCardsToRiver();
-					this.resolveRound();
+					this.resolvePotWinners();
 				} else if (++this.street === this.Street.SHOWDOWN || this.nonFoldedPlayers().length === 1) {
-					this.resolveRound();
+					this.resolvePotWinners();
 				} else {
 					this.dealCommunityCards();
 					this.startStreet();
@@ -210,20 +210,11 @@ function(pokerHandEvaluator,   moment,   constants) {
 		// The purpose of this function is to determine if that moment has arrived ... 
 		standUp: function() { 
 			var nonFoldedPlayers = this.nonFoldedPlayers();
-			var nonFoldedAllInPlayers = this.nonFoldedAllInPlayers();
+			var allInPlayers = _.filter(nonFoldedPlayers, function(player) { 
+				return player.action === Player.Action.ALLIN;
+		    });
 			// only 0 or 1 players that haven't folded are all in. 
-			return ((nonFoldedAllInPlayers.length + 1) >= nonFoldedPlayers.length);
-		},
-		resolveRound: function() {
-			this.resolvePotWinners();
-			this.communityCards = [];
-			this.moveButton();
-			if (!this.findGameWinner()) {
-				this.startRound(); 
-			} else {
-				// game is over we have a winner!
-				alert('Game winner is ' + findGameWinner());
-			}
+			return ((allInPlayers.length + 1) >= nonFoldedPlayers.length);
 		},
 		getCurrentPot: function() {
 			return this.pots[this.pots.length - 1];
@@ -264,10 +255,13 @@ function(pokerHandEvaluator,   moment,   constants) {
 		},
 		// when a player bets or raises in a way that requires a call, they are the first to show, regardless of table position 
 		changeShowdownPlayer: function(playerToFlip) {
+			this.resetShowdownPlayer();
+			playerToFlip.flip = true;
+		},
+		resetShowdownPlayer: function() {
 			_.each(this.players, function(player) {
 				player.flip = false;
 			});
-			playerToFlip.flip = true;
 		},
 		isStreetOver: function() {
 			var nonFoldedPlayers = this.nonFoldedPlayers();
@@ -320,7 +314,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 		    console.log('------------------------------------');
 		},
 		// Given a closed street of betting, resolve any side pots that have occurred from all-ins.
-		resolvePots: function() {
+		reconcilePots: function() {
 			var nonFoldedPlayers = this.nonFoldedPlayers();
 			// Only create side pots if we have all in players with liveBets still in play.
 			// Note that the liveBet is what we decrement to ensure that a player is as eligible for as many pots as possible.
@@ -340,7 +334,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 			    	nonFoldedPlayer.liveBet -= lowestAllInBet;
 			    });
 			    this.pots.push(sidePot);
-			    this.resolvePots(); // we may need to skim another pot.
+			    this.reconcilePots(); // we may need to skim another pot.
 			} else {
 				// clear all live bets for this street
 			    _.each(this.players, function(player) {
@@ -349,46 +343,114 @@ function(pokerHandEvaluator,   moment,   constants) {
 			}
 		},
 		resolvePotWinners: function() {
-			// Need to order the list of players evaluated based on the betting at the end 
-
-			// If we have split pots, then everyone in this list has to be a winner
-			var currentWinners = [];
-			var losers = this.foldedPlayers();
-			while (this.pots.length > 0) {
+			var potResolver = {};
+			potResolver.losers = this.foldedPlayers();
+			potResolver.winners = [];
+			potResolver.potIndex = 0;
+			this.resolveUncontestedPots(potResolver);
+			this.resolveContestedPot(potResolver); 
+		},
+		resolveUncontestedPots: function() {
+			// Get rid of all the zero pots.
+			while (this.pots.length > 0 && this.getCurrentPot().amount === 0) {
+				this.pots.pop();
+			};
+			// Award all pots that have only one eligible player, where one player got everyone else to fold (for that pot)
+			while (this.pots.length > 0 && this.getCurrentPot().players.length === 1) {
 				var currentPot = this.pots.pop();
-				if (currentPot.amount === 0) {
-					continue;
-				}; 
-				var highHand; 
-				_.chain(currentPot.players)
-					.sortBy(function (player) { return !player.flip; })
-					.difference(losers) // any players who've already lost will lose future pots and should not be considered
-					.each(function (player) {
-						// var sevenCards = this.communityCards.concat(player.hand); 
-						// the card deck i'm using sucks. I should just build one of my own, the fact that I have to use this parser =P~~
-						var sevenCards = this.convertOldCards(this.communityCards.concat(player.hand));
-						var currentHand = this.handEvaluator.evaluateHand(sevenCards);
-						if (currentWinners.length > 0) {
-							var diff = currentHand.compare(highHand);
-							if (diff === 0) {
-								currentWinners.push(player);
-							} else if (diff > 0) {
-								losers = losers.concat(currentWinners);
-								currentWinners = [player];
-								highHand = currentHand;
-							} else {
-								losers = losers.concat(player);
-							}
-						} else {
-							highHand = currentHand;
-							currentWinners.push(player);
-						}
-					}, this);
-				var award = currentPot.amount / currentWinners.length;
-				_.each(currentWinners, function (winner) {
-					winner.stack += award;
-				});
+				currentPot.award();
+			};
+			if (this.pots.length === 0) { // no more pots!
+				this.endRound();
+			};
+		},
+		resolveContestedPot: function(potResolver) {
+			// at this point, we have at least one pot with at least two contenders.
+			var currentPot = this.getCurrentPot();
+			potResolver.eligiblePlayers = _.chain(currentPot.players) // refine players in pot ... 
+				.filter(function (player) { return !player.askedToShow; }) // any players that have been asked to show should either be a winner or loser by now.
+				.sortBy(function (player) { return !player.flip; }) // any players that need to flip should be first
+				.difference(potResolver.losers) // any players who've already lost will lose future pots and should not be considered
+				.value(); // how to best hold players in here?
+			if (potResolver.eligiblePlayers[0].flip) { // played who got called MUST show
+				potResolver.currentEligiblePlayer = potResolver.eligiblePlayers.shift();
+				this.determineIfCurrentPlayerIsWinner(potResolver);
+				potResolver.currentEligiblePlayer.markHandShown(true);
 			}
+			this.promptPlayerToShowOrMuckHand(potResolver);
+		},
+		determineIfCurrentPlayerIsWinner: function(potResolver) {
+			var player = potResolver.currentEligiblePlayer;
+			var sevenCards = this.convertOldCards(this.communityCards.concat(player.hand)); // bleech need to use new deck
+			player.fullHand = this.handEvaluator.evaluateHand(sevenCards);
+			if (potResolver.winners.length > 0) {
+				var diff = player.fullHand.compare(potResolver.highHand);
+				if (diff === 0) {
+					potResolver.winners.push(player);
+				} else if (diff > 0) {
+					potResolver.losers = potResolver.losers.concat(potResolver.winners);
+					potResolver.winners = [player];
+					potResolver.highHand = player.fullHand;
+				} else {
+					potResolver.losers = potResolver.losers.concat(player);
+				}
+			} else {
+				potResolver.highHand = player.fullHand;
+				potResolver.winners.push(player);
+			}
+		},
+		promptPlayerToShowOrMuckHand: function(potResolver) {
+			potResolver.currentEligiblePlayer = potResolver.eligiblePlayers.shift();
+			var currentTable = this;
+			var options = { actions: [Player.Action.MuckHand, Player.Action.ShowHand] };
+			potResolver.currentEligiblePlayer.action = Player.Action.ShowDown;
+			this.gameController.updateInterface();
+			this.gameController.broadcastInterfaceUpdate();
+			this.gameController.promptPlayerAction(potResolver.currentEligiblePlayer, options, function(response) { 
+				currentTable.resolveShowDownAction(potResolver, response); 
+			});
+		},
+		resolveShowDownAction: function(potResolver, response) {
+			switch (response.action) {
+				case Player.Action.MuckHand: 
+					potResolver.losers = potResolver.losers.concat(potResolver.currentEligiblePlayer);
+					potResolver.currentEligiblePlayer.markHandShown(false);
+					break;
+				case Player.Action.ShowHand: 
+					this.determineIfCurrentPlayerIsWinner(potResolver);
+					potResolver.currentEligiblePlayer.markHandShown(true);
+					break;
+			};
+			this.gameController.updateInterface();
+			this.gameController.broadcastInterfaceUpdate();
+			if (potResolver.eligiblePlayers.length > 0) {
+				this.promptPlayerToShowOrMuckHand(potResolver);
+			} else {
+				var resolvedPot = this.pots.pop(); // PROBLEM: pots disappear when I pop them off the pot stack!!!
+				resolvedPot.players = potResolver.winners;
+				resolvedPot.award();
+				this.gameController.updateInterface();
+				this.gameController.broadcastInterfaceUpdate();
+				if (this.pots.length > 0) {
+					this.resolveContestedPot(potResolver);
+				} else { // all pots have been awarded, move to the next hand!
+					this.endRound();
+				}
+			}
+		},
+		endRound: function() {
+			var currentTable = this;
+			var options = { actions: [Player.Action.StartNextHand] };
+			this.gameController.promptPlayerAction(this.players[0], options, function() { 
+				currentTable.communityCards = [];
+				currentTable.moveButton();
+				if (!currentTable.findGameWinner()) {
+					currentTable.startRound(); 
+				} else {
+					// game is over we have a winner!
+					alert('Game winner is ' + currentTable.findGameWinner().name);
+				}
+			});
 		},
 		convertOldCards: function(oldCards) { // need to make my own card deck ... 
 			return _.map(oldCards, function(oldCard) {
@@ -444,25 +506,47 @@ function(pokerHandEvaluator,   moment,   constants) {
      */
     function Pot() {
     	this.amount = 0;
-    	this.players = {};
+    	this.players = [];
+    	this.lookupTable = {};
     }
     Pot.prototype = {
     	build: function(bet, player) {
     		this.amount += bet;
-    		this.makeEligible(player); 
+    		this.makeEligible(player);
     	},
     	isAnyoneEligible: function() {
-    		return (_.keys(this.players).length !== 0);
+    		return (this.players.length !== 0);
     	},
     	makeEligible: function(player) {
-    		this.players[player.name] = player; // problem is that player information is serialized in these pots ... 
+    		if (!this.isEligible(player)) {
+    			this.lookupTable[player.name] = player; // problem is that player information is serialized in these pots ...
+    			this.players = _.values(this.lookupTable);
+    		}
     	},
     	isEligible: function(player) {
-    		return (player.name in this.players);
+    		return (player.name in this.lookupTable);
     	},
     	listEligliblePlayers: function() {
-    		return _.reduce(_.keys(this.players), function(l, name) { return l + ', ' + name; });
-    	}
+    		return _.chain(this.players)
+					.map(function(player) { return player.name } )
+					.reduce(function(l, name) { return l + ', ' + name; })
+					.value();
+    	},
+    	getNumberOfEligiblePlayers: function() {
+    		return this.players.length;
+    	},
+    	award: function() {
+			var prize = this.amount / this.players.length;
+			_.each(this.players, function (winner) {
+				winner.stack += prize;
+			});
+			this.amount = 0;
+			if (this.players.length > 1) {
+				this.awardMessage = this.listEligliblePlayers() + ' each win ' + prize;
+			} else {
+				this.awardMessage = this.players[0].name + ' wins ' + prize;
+			}
+		},
     }
 
 	/*
@@ -510,6 +594,10 @@ function(pokerHandEvaluator,   moment,   constants) {
 		RAISE: 'Raise', // Player makes at least a minimum raise, and has chips still left.
 		ALLIN: 'All-In', // Player pushes rest of their chips (regardless of bet, call, or raise)
 		ToAct: 'ToAct', // Player has been prompted to make an action.
+		ShowDown: 'ShowDown', // Player has been prompted to show or muck cards.
+		MuckHand: 'MuckHand', // Player will not show hand.
+		ShowHand: 'ShowHand', // Player will show hand.
+		StartNextHand: 'StartNextHand',
 	};
 	Player.prototype = {
 		// Player checks. Nothing changes monetarily for player.
@@ -576,6 +664,19 @@ function(pokerHandEvaluator,   moment,   constants) {
 		allIn: function(pot) {
 			return this.absoluteBet(this.stack, Player.Action.ALLIN, pot);
 		},
+		markHandShown: function(show) {
+			this.showHand = show;
+			this.action = (show ? Player.Action.ShowHand : Player.Action.MuckHand);
+			this.handValue = (show ? this.fullHand.toString() : '');
+			this.askedToShow = true;
+		},
+		resetForNewRound: function() {
+			this.hand = [];
+			this.fullHand = null;
+			this.handValue = null;
+			this.showHand = false;
+			this.askedToShow = false;
+		}
 	}
 	/*
      End Player object.

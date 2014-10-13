@@ -115,8 +115,8 @@ function(React,   gameController,   $,        constants) {
         render: function() {
             var cards = [];
             if (this.props.player.hand) {
-                cards.push(<Card card={this.props.player.hand[0]} />);
-                cards.push(<Card card={this.props.player.hand[1]} />);
+                cards.push(<Card key={'card0'} card={this.props.player.hand[0]} />);
+                cards.push(<Card key={'card1'} card={this.props.player.hand[1]} />);
             }
             return (
                 <tr >
@@ -130,7 +130,7 @@ function(React,   gameController,   $,        constants) {
                     </td>
                     <td className="stack">{this.props.player.stack}</td>
                     <td className="liveBet">{this.props.player.liveBet}</td>
-                    <Status action={this.props.player.action} />
+                    <Status action={this.props.player.action} hand={this.props.player.handValue}/>
                 </tr>
             );  
         }
@@ -193,14 +193,14 @@ function(React,   gameController,   $,        constants) {
             switch (this.props.action) {
                 case PlayerAction.Bet:
                 case PlayerAction.Call:
-                case 'Win Hand':
+                case PlayerAction.ShowHand:
                     buttonType = 'btn-success' 
                     break;
                 case PlayerAction.Raise:
                     buttonType = 'btn-info' 
                     break;
                 case PlayerAction.Fold:
-                case 'Muck Hand':
+                case PlayerAction.MuckHand:
                     buttonType = 'btn-danger' 
                     break;
                 case PlayerAction.AllIn:
@@ -218,10 +218,11 @@ function(React,   gameController,   $,        constants) {
             //     'btn-xs': true,
             //     buttonType: true
             // });
+            var hand = (this.props.hand ? ': ' + this.props.hand : '');
             var classes = 'btn btn-xs ' + buttonType;
             return(
                 <td className="status">
-                    <button type="button" className={classes} disabled>{this.props.action}</button>
+                    <button type="button" className={classes} disabled>{this.props.action + hand}</button>
                 </td>
             );  
         }
@@ -304,6 +305,15 @@ function(React,   gameController,   $,        constants) {
         allIn: function(e) {
             gameController.submitPlayerAction(PlayerAction.AllIn);
         },
+        muckHand: function(e) {
+            gameController.submitPlayerAction(PlayerAction.MuckHand);
+        },
+        showHand: function(e) {
+            gameController.submitPlayerAction(PlayerAction.ShowHand);
+        },
+        startNextHand: function(e) {
+            gameController.submitPlayerAction(PlayerAction.StartNextHand);
+        },
         render: function() {
             var elements = [];
             var callBet = this.props.options.callBet;
@@ -312,26 +322,35 @@ function(React,   gameController,   $,        constants) {
             var callMessage = deltaBet + ' to call' + (callBet !== deltaBet ? ' (' + callBet + ' total)' : '');
             _.each(this.props.options.actions, function(action) {
                 switch (action) {
-                    case 'Fold':
+                    case PlayerAction.Fold:
                         elements.push(<button key="fold" type="button" className="btn btn-danger" onClick={this.fold}>{action}</button>); 
                         break;
-                    case 'Check':
+                    case PlayerAction.Check:
                         elements.push(<button key="check" type="button" className="btn btn-success" onClick={this.check}>Check</button>);
                         break;
-                    case 'Call':
+                    case PlayerAction.Call:
                         elements.push(<button key="call" type="button" className="btn btn-success" onClick={this.callBet}>{callMessage}</button>);
                         elements.push(<input key="callAmount" type="hidden" ref="callAmount" value={callBet}/>);
                         break;
-                    case 'Bet':
+                    case PlayerAction.Bet:
                         elements.push(<button key="bet" type="button" className="btn btn-info" onClick={this.bet}>{action}</button>);
                         elements.push(<input key="betAmount" ref="betAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} type="number"/>);
                         break;
-                    case 'Raise':
+                    case PlayerAction.Raise:
                         elements.push(<button key="raise" type="button" className="btn btn-info" onClick={this.raise}>{action}</button>);
                         elements.push(<input key="raiseAmount" ref="raiseAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} type="number"/>);
                         break;
-                    case 'All-In':
+                    case PlayerAction.AllIn:
                         elements.push(<button key="allIn" type="button" className="btn btn-warning" onClick={this.allIn}>{action}</button>);
+                        break;
+                    case PlayerAction.MuckHand:
+                        elements.push(<button key="muckHand" type="button" className="btn btn-danger" onClick={this.muckHand}>Muck Hand</button>);
+                        break;
+                    case PlayerAction.ShowHand:
+                        elements.push(<button key="showHand" type="button" className="btn btn-success" onClick={this.showHand}>Show Hand</button>);
+                        break;
+                    case PlayerAction.StartNextHand:
+                        elements.push(<button key="startNextHand" type="button" className="btn btn-success" onClick={this.startNextHand}>Start Next Hand</button>);
                         break;
                 }
             }, this);
@@ -370,7 +389,11 @@ function(React,   gameController,   $,        constants) {
 
     var Pot = React.createClass({
         render: function() {
-            return (<h4>Pot: {this.props.amount} ({_.reduce(_.keys(this.props.players), function(l, name) { return l + ', ' + name; })})</h4>);
+            var message = (this.props.awardMessage 
+                ? this.props.awardMessage
+                : _.map(this.props.players, function(player) { return player.name; })
+            );
+            return (<h4>Pot: {this.props.amount} {message}</h4>);
         },
     });
 

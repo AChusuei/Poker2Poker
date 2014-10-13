@@ -123,7 +123,7 @@ define(['constants', 'underscore'], function(constants) {
 	var sanitizeTableForBroadcast = function(peerId) {
 		var cleanTable = JSON.parse(JSON.stringify(table));
 		_.each(cleanTable.players, function(player) {
-			if (player.peerId !== peerId) {
+			if (player.peerId !== peerId && !player.showHand) {
 				player.hand = null;
 			}
 		});
