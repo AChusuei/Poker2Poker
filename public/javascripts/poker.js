@@ -350,26 +350,28 @@ function(pokerHandEvaluator,   moment,   constants) {
 			this.resolveUncontestedPots(potResolver);
 			this.resolveContestedPot(potResolver); 
 		},
-		resolveUncontestedPots: function() {
+		resolveUncontestedPots: function(potResolver) {
 			// Get rid of all the zero pots.
 			while (this.pots.length > 0 && this.getCurrentPot().amount === 0) {
 				this.pots.pop();
 			};
+			potResolver.potIndex = this.pots.length - 1;
 			// Award all pots that have only one eligible player, where one player got everyone else to fold (for that pot)
-			while (this.pots.length > 0 && this.getCurrentPot().players.length === 1) {
-				var currentPot = this.pots.pop();
-				currentPot.award();
+			while (potResolver.potIndex > -1 && this.pots[potResolver.potIndex].players.length === 1) {
+				this.pots[potResolver.potIndex].award();
+				potResolver.potIndex--;
 			};
-			if (this.pots.length === 0) { // no more pots!
+			if (potResolver.potIndex === -1) { // no more pots!
 				this.endRound();
 			};
 		},
 		resolveContestedPot: function(potResolver) {
 			// at this point, we have at least one pot with at least two contenders.
-			var currentPot = this.getCurrentPot();
+			var currentPot = this.pots[potResolver.potIndex];
 			potResolver.eligiblePlayers = _.chain(currentPot.players) // refine players in pot ... 
 				.filter(function (player) { return !player.askedToShow; }) // any players that have been asked to show should either be a winner or loser by now.
 				.sortBy(function (player) { return !player.flip; }) // any players that need to flip should be first
+				.sortBy(function (player) { return player.button; }) // any players that need to flip should be first
 				.difference(potResolver.losers) // any players who've already lost will lose future pots and should not be considered
 				.value(); // how to best hold players in here?
 			if (potResolver.eligiblePlayers[0].flip) { // played who got called MUST show
@@ -426,12 +428,13 @@ function(pokerHandEvaluator,   moment,   constants) {
 			if (potResolver.eligiblePlayers.length > 0) {
 				this.promptPlayerToShowOrMuckHand(potResolver);
 			} else {
-				var resolvedPot = this.pots.pop(); // PROBLEM: pots disappear when I pop them off the pot stack!!!
+				var resolvedPot = this.pots[potResolver.potIndex];
 				resolvedPot.players = potResolver.winners;
 				resolvedPot.award();
+				potResolver.potIndex--;
 				this.gameController.updateInterface();
 				this.gameController.broadcastInterfaceUpdate();
-				if (this.pots.length > 0) {
+				if (potResolver.potIndex > -1) {
 					this.resolveContestedPot(potResolver);
 				} else { // all pots have been awarded, move to the next hand!
 					this.endRound();
@@ -540,11 +543,14 @@ function(pokerHandEvaluator,   moment,   constants) {
 			_.each(this.players, function (winner) {
 				winner.stack += prize;
 			});
-			this.amount = 0;
+			var handValue = '';
+			if (this.players[0].handValue) {
+				handValue = ' with ' + this.players[0].handValue;
+			}
 			if (this.players.length > 1) {
-				this.awardMessage = this.listEligliblePlayers() + ' each win ' + prize;
+				this.awardMessage = this.listEligliblePlayers() + ' each win ' + prize + handValue;
 			} else {
-				this.awardMessage = this.players[0].name + ' wins ' + prize;
+				this.awardMessage = this.players[0].name + ' wins ' + prize + handValue;
 			}
 		},
     }

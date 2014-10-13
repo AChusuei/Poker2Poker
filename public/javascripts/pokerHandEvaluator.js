@@ -116,9 +116,9 @@ define(['underscore'], function() {
 			var ranks = '(';
 			for (var c = 0; c < this.cards.length; c++) {
 				if (c !== 0) { 
-					ranks += ','; 
+					ranks += ', '; 
 				}
-				ranks += this.cards[c].getRankName();
+				ranks += this.cards[c].rank;
 			}
 			ranks += ')';
 			return ranks;
@@ -152,7 +152,7 @@ define(['underscore'], function() {
 										+ this.cards[3].getRankName() + ', ' 
 										+ this.cards[4].getRankName() + ' kicker';
 				case Hand.Rank.HighCard: 
-					return this.cards[0].getRankName() + '-high, ' + this.listCardRanks();
+					return this.cards[0].getRankName() + '-high ' + this.listCardRanks();
 			}
 		},
 	};

@@ -190,10 +190,14 @@ function(React,   gameController,   $,        constants) {
     var Status = React.createClass({
         render: function() {
             var buttonType;
+            var action = this.props.action;
             switch (this.props.action) {
                 case PlayerAction.Bet:
                 case PlayerAction.Call:
+                    buttonType = 'btn-success' 
+                    break;
                 case PlayerAction.ShowHand:
+                    action = 'Shows '
                     buttonType = 'btn-success' 
                     break;
                 case PlayerAction.Raise:
@@ -218,11 +222,11 @@ function(React,   gameController,   $,        constants) {
             //     'btn-xs': true,
             //     buttonType: true
             // });
-            var hand = (this.props.hand ? ': ' + this.props.hand : '');
+            var hand = (this.props.hand ? this.props.hand : '');
             var classes = 'btn btn-xs ' + buttonType;
             return(
                 <td className="status">
-                    <button type="button" className={classes} disabled>{this.props.action + hand}</button>
+                    <button type="button" className={classes} disabled>{action + hand}</button>
                 </td>
             );  
         }
@@ -389,11 +393,11 @@ function(React,   gameController,   $,        constants) {
 
     var Pot = React.createClass({
         render: function() {
-            var message = (this.props.awardMessage 
-                ? this.props.awardMessage
-                : _.map(this.props.players, function(player) { return player.name; })
+            var message = (this.props.pot.awardMessage 
+                ? this.props.pot.awardMessage
+                : _.map(this.props.pot.players, function(player) { return player.name; })
             );
-            return (<h4>Pot: {this.props.amount} {message}</h4>);
+            return (<h4>Pot: {this.props.pot.amount}{' -> ' +message}</h4>);
         },
     });
 
@@ -402,7 +406,7 @@ function(React,   gameController,   $,        constants) {
             if (!this.props.pots || this.props.pots.length === 0) return null;
             var pots = [];
             _.each(this.props.pots, function(pot, index) {
-                pots.push(<Pot key={'pot' + index} amount={pot.amount} players={pot.players}/>);
+                pots.push(<Pot key={'pot' + index} pot={pot}/>);
             });
             return (
                 <div>
