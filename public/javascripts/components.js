@@ -320,6 +320,7 @@ function(React,   gameController,   $,        constants) {
         },
         render: function() {
             var elements = [];
+            var bigBlind = this.props.options.bigBlind;
             var callBet = this.props.options.callBet;
             var deltaBet = callBet - this.props.liveBet;
             var minimumRaise = this.props.options.minimumRaise;
@@ -338,11 +339,11 @@ function(React,   gameController,   $,        constants) {
                         break;
                     case PlayerAction.Bet:
                         elements.push(<button key="bet" type="button" className="btn btn-info" onClick={this.bet}>{action}</button>);
-                        elements.push(<input key="betAmount" ref="betAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} type="number"/>);
+                        elements.push(<input key="betAmount" ref="betAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} step={bigBlind} type="number"/>);
                         break;
                     case PlayerAction.Raise:
                         elements.push(<button key="raise" type="button" className="btn btn-info" onClick={this.raise}>{action}</button>);
-                        elements.push(<input key="raiseAmount" ref="raiseAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} type="number"/>);
+                        elements.push(<input key="raiseAmount" ref="raiseAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} step={bigBlind} type="number"/>);
                         break;
                     case PlayerAction.AllIn:
                         elements.push(<button key="allIn" type="button" className="btn btn-warning" onClick={this.allIn}>{action}</button>);

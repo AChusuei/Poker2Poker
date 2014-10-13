@@ -153,6 +153,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 			};
 			actions.push(Player.Action.ALLIN);
 			return { 
+				bigBlind: minimumBet,
 				callBet: callBet,
 				minimumRaise: minimumRaise,
 				actions: actions,
