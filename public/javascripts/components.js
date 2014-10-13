@@ -1,5 +1,5 @@
-define(['React', 'gameController', 'jquery', 'constants', 'underscore'], 
-function(React,   gameController,   $,        constants) {
+define(['React', 'gameController', 'constants', 'underscore'], 
+function(React,   gameController,   constants) {
 
     var connectionDashboard;
     var connectedPlayerTable;
@@ -13,11 +13,15 @@ function(React,   gameController,   $,        constants) {
                 userPeerId: null,
             };
         },
+        hide: function() {
+            this.setState({ hide: true });
+        },
         startSession: function() {
             var userName = this.refs.userName.getDOMNode().value.trim();
             gameController.startSession(userName);
         }, 
         render: function() {
+            if (this.state.hide) return null;
             var disabled = this.state.userPeerId;
             var message = (this.state.userPeerId ? 'Session Started' : 'Start Session'); // disabled={disableStartGameButton}
             return (
@@ -33,7 +37,7 @@ function(React,   gameController,   $,        constants) {
         getInitialState: function() {
             return {players: []};
         },
-        hideTable: function() {
+        hide: function() {
             this.setState({ hide: true });
         },
         startTournamentGame: function() {
@@ -482,8 +486,8 @@ function(React,   gameController,   $,        constants) {
     }
 
     var hideConnectionDashboard = function() {
-        connectedPlayerTable.hideTable();
-        // $('#connectionDashboard').hide(); // move session starter to react
+        connectedPlayerTable.hide();
+        connectionDashboard.hide();
     }
 
     return {

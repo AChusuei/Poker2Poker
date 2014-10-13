@@ -19,7 +19,6 @@ define(['peer'], function(peer) {
 		});
 		peer.on('close', function() {
 	    	console.log('peer ' + this.id + ' was closed.');
-	    	// gameController.signalGameUI('close', { peerId : this.id });
 		});
 	};
 

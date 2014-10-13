@@ -31,8 +31,8 @@ requirejs.config({
 });
 
 // Start the main app logic.
-requirejs(['jquery', 'bootstrap', 'poker', 'peerActions', 'gameUI', 'gameController', 'jsx!components'],
-function($, bootstrap, poker, peerActions, gameUI, gameController, components) {    
-    gameController.initialize(gameUI, poker, peerActions, components);
+requirejs(['jquery', 'bootstrap', 'poker', 'peerActions', 'gameController', 'jsx!components'],
+function($, bootstrap, poker, peerActions, gameController, components) {    
+    gameController.initialize(poker, peerActions, components);
     gameController.startApplication();
 });

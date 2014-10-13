@@ -1,6 +1,5 @@
 define(['constants', 'underscore'], function(constants) {
 
-	var gameUI;
 	var poker;
 	var peerActions;
 	var components;
@@ -175,8 +174,7 @@ define(['constants', 'underscore'], function(constants) {
 	}
 
 	return {
-		initialize: function(g, p, s, c) {
-			gameUI = g;
+		initialize: function(p, s, c) {
 			poker = p;
 			peerActions = s;
 			components = c;
