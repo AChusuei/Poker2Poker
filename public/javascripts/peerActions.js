@@ -1,8 +1,9 @@
-define(['peer'], function(peer) {
+define(['peer', 'constants'], function(peer, constants) {
 
 	var peer;
 	var connections = {};
 	var gameController;
+	var MessageType = constants.MessageType;
 
 	var startSession = function(controller) {
 	    gameController = controller;
@@ -39,7 +40,7 @@ define(['peer'], function(peer) {
 	        if (connectionsToNotify && connectionsToNotify.length !== 0) {
 	        	_.each(connectionsToNotify, function(connection) {
 	        		connection.send({
-						type: 'requestPlayerConnection',
+						type: MessageType.PlayerConnectionRequest,
 						data: { remotePeerId: peerId },
 					});	
 	        	});

@@ -1,6 +1,8 @@
 define(['pokerHandEvaluator', 'moment', 'constants', 'underscore', 'playingCards'], 
 function(pokerHandEvaluator,   moment,   constants) {
 
+	var PlayerAction = constants.PlayerAction;
+
     /*
      Start table object regarding table position and dealing.
      */
@@ -43,7 +45,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 				} else {
 					this.currentPlayer += 1;
 				}
-			} while (this.currentLivePlayer().stack === 0 || this.currentLivePlayer().action === Player.Action.FOLD);
+			} while (this.currentLivePlayer().stack === 0 || this.currentLivePlayer().action === PlayerAction.Fold);
 			return this.currentLivePlayer();
 		},
 		currentLivePlayer: function() {
@@ -102,7 +104,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 		// Play one street of poker. 
 		startStreet: function() {
 			_.each(this.nonFoldedPlayers(), function(player) {
-				player.action = Player.Action.YETTOACT;
+				player.action = PlayerAction.YetToAct;
 				this.resetShowdownPlayer();
 				if (this.street > this.Street.PREFLOP) {
 					player.liveBet = 0;
@@ -115,7 +117,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 			var player = this.nextLivePlayer();
 			var options = this.formulateActionOptions(player);
 			var currentTable = this;
-			player.action = Player.Action.ToAct
+			player.action = PlayerAction.ToAct
 			this.gameController.updateInterface();
 			this.gameController.broadcastInterfaceUpdate();
 			this.gameController.promptPlayerAction(player, options, function(response) { 
@@ -129,7 +131,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 			var callBet = this.getCurrentCallBet();
 			// Calculates the minimum marginal additional amount needed for a raise.
 			var maxNonCallBet = _.chain(this.players) // Figures out the highest bet
-			    .filter(function(p) { return p.action != Player.Action.FOLD && p.liveBet < callBet; } )
+			    .filter(function(p) { return p.action != PlayerAction.Fold && p.liveBet < callBet; } )
 				.max(function(p) { return p.liveBet; }, this)
 				.value().liveBet;
 			if (maxNonCallBet === undefined) {
@@ -138,20 +140,20 @@ function(pokerHandEvaluator,   moment,   constants) {
 			var minimumRaiseDelta = ((callBet - maxNonCallBet) < minimumBet ? minimumBet : callBet - maxNonCallBet);
 			// The absolute value of the minimum raise.
 			var minimumRaise = Math.min(callBet + minimumRaiseDelta, player.liveBet + player.stack);
-			var actions = [Player.Action.FOLD];
+			var actions = [PlayerAction.Fold];
 			if (callBet === 0) {
-				actions.push(Player.Action.CHECK, Player.Action.BET);
+				actions.push(PlayerAction.Check, PlayerAction.Bet);
 			} else if ((player.stack + player.liveBet) > callBet) {
 				if (player.liveBet === callBet) { // big blind option check
-					actions.push(Player.Action.CHECK);
+					actions.push(PlayerAction.Check);
 				} else {
-					actions.push(Player.Action.CALL);
+					actions.push(PlayerAction.Call);
 				}
 				if (player.stack + player.liveBet > minimumRaise) {
-					actions.push(Player.Action.RAISE);
+					actions.push(PlayerAction.Raise);
 				};
 			};
-			actions.push(Player.Action.ALLIN);
+			actions.push(PlayerAction.AllIn);
 			return { 
 				bigBlind: minimumBet,
 				callBet: callBet,
@@ -161,7 +163,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 		},
 		getCurrentCallBet: function() {
 			return _.chain(this.players)
-			    .filter(function(p) { return p.action !== Player.Action.FOLD; } )
+			    .filter(function(p) { return p.action !== PlayerAction.Fold; } )
 				.max(function(p) { return p.liveBet; }, this)
 				.value().liveBet;
 		},
@@ -212,7 +214,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 		standUp: function() { 
 			var nonFoldedPlayers = this.nonFoldedPlayers();
 			var allInPlayers = _.filter(nonFoldedPlayers, function(player) { 
-				return player.action === Player.Action.ALLIN;
+				return player.action === PlayerAction.AllIn;
 		    });
 			// only 0 or 1 players that haven't folded are all in. 
 			return ((allInPlayers.length + 1) >= nonFoldedPlayers.length);
@@ -225,24 +227,24 @@ function(pokerHandEvaluator,   moment,   constants) {
 			var pot = this.getCurrentPot();
 			var amount = response.amount;
 			switch (response.action) {
-				case Player.Action.CHECK: 
+				case PlayerAction.Check: 
 					player.check(); 
 					break;
-				case Player.Action.FOLD: 
+				case PlayerAction.Fold: 
 					player.fold(); 
 					break;
-				case Player.Action.BET: 
+				case PlayerAction.Bet: 
 					player.bet(amount, pot); 
 					this.changeShowdownPlayer(player);
 					break;
-				case Player.Action.CALL: 
+				case PlayerAction.Call: 
 					player.call(amount, pot); 
 					break;
-				case Player.Action.RAISE: 
+				case PlayerAction.Raise: 
 					player.raise(amount, pot);
 					this.changeShowdownPlayer(player);
 					break;
-				case Player.Action.ALLIN: 
+				case PlayerAction.AllIn: 
 					player.allIn(pot);
 					if (player.liveBet > this.getCurrentCallBet()) {
 						this.changeShowdownPlayer(player); // all in raise
@@ -271,37 +273,37 @@ function(pokerHandEvaluator,   moment,   constants) {
 		    }).liveBet;
 		    var onlyOnePlayerLeft = (nonFoldedPlayers.length == 1);
 			var restChecked = _.every(nonFoldedPlayers, function(player) { 
-				return player.action === Player.Action.CHECK; 
+				return player.action === PlayerAction.Check; 
 		    }, this);
 		    var madeWager = function(player) {
-		    	return player.action === Player.Action.BET || 
-		    		   player.action === Player.Action.CALL ||
-		    	       player.action === Player.Action.RAISE;
+		    	return player.action === PlayerAction.Bet || 
+		    		   player.action === PlayerAction.Call ||
+		    	       player.action === PlayerAction.Raise;
 		    }
 			var restCalledTheHighBetOrAllIn = _.every(nonFoldedPlayers, function(player) { 
 				return (madeWager(player) && player.liveBet === highBet) ||
-				       (player.action === Player.Action.ALLIN && player.liveBet <= highBet)
+				       (player.action === PlayerAction.AllIn && player.liveBet <= highBet)
 		    }, this);
 		    var nonFoldedPlayersLimpedAndBigBlindCheckedOption = (
 		    	this.street === this.Street.PREFLOP && _.every(nonFoldedPlayers, function(player) { 
-					return (player.action === Player.Action.CHECK || player.action === Player.Action.CALL)
+					return (player.action === PlayerAction.Check || player.action === PlayerAction.Call)
 			    })
 		    );
 			return onlyOnePlayerLeft || restChecked || restCalledTheHighBetOrAllIn || nonFoldedPlayersLimpedAndBigBlindCheckedOption;
 		},
 		nonFoldedPlayers: function() {
 			return _.filter(this.players, function(player) { 
-				return player.action !== Player.Action.FOLD;
+				return player.action !== PlayerAction.Fold;
 		    });
 		},
 		nonFoldedAllInPlayers: function() {
 			return _.filter(this.nonFoldedPlayers(), function(player) { 
-				return player.action === Player.Action.ALLIN && player.liveBet > 0;
+				return player.action === PlayerAction.AllIn && player.liveBet > 0;
 		    });
 		},
 		foldedPlayers: function() {
 			return _.filter(this.players, function(player) { 
-				return player.action === Player.Action.FOLD;
+				return player.action === PlayerAction.Fold;
 		    });
 		},
 		getStatus: function() {
@@ -410,8 +412,8 @@ function(pokerHandEvaluator,   moment,   constants) {
 		promptPlayerToShowOrMuckHand: function(potResolver) {
 			potResolver.currentEligiblePlayer = potResolver.eligiblePlayers.shift();
 			var currentTable = this;
-			var options = { actions: [Player.Action.MuckHand, Player.Action.ShowHand] };
-			potResolver.currentEligiblePlayer.action = Player.Action.ShowDown;
+			var options = { actions: [PlayerAction.MuckHand, PlayerAction.ShowHand] };
+			potResolver.currentEligiblePlayer.action = PlayerAction.ShowDown;
 			this.gameController.updateInterface();
 			this.gameController.broadcastInterfaceUpdate();
 			this.gameController.promptPlayerAction(potResolver.currentEligiblePlayer, options, function(response) { 
@@ -420,11 +422,11 @@ function(pokerHandEvaluator,   moment,   constants) {
 		},
 		resolveShowDownAction: function(potResolver, response) {
 			switch (response.action) {
-				case Player.Action.MuckHand: 
+				case PlayerAction.MuckHand: 
 					potResolver.losers = potResolver.losers.concat(potResolver.currentEligiblePlayer);
 					potResolver.currentEligiblePlayer.markHandShown(false);
 					break;
-				case Player.Action.ShowHand: 
+				case PlayerAction.ShowHand: 
 					this.determineIfCurrentPlayerIsWinner(potResolver);
 					potResolver.currentEligiblePlayer.markHandShown(true);
 					break;
@@ -452,7 +454,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 		},
 		endRound: function() {
 			var currentTable = this;
-			var options = { actions: [Player.Action.StartNextHand] };
+			var options = { actions: [PlayerAction.StartNextHand] };
 			this.gameController.promptPlayerAction(this.players[0], options, function() { 
 				currentTable.communityCards = [];
 				currentTable.moveButton();
@@ -598,37 +600,21 @@ function(pokerHandEvaluator,   moment,   constants) {
 		this.liveBet = 0;
 		this.peerId = peerId;
 	};
-	Player.Action = {
-		YETTOACT: 'YetToAct', // Player passes at making a bet
-		POSTANTE: 'PostAnte', // Player has posted an ante.
-		POSTBLIND: 'PostBlind', // Player has posted a blind.
-		CHECK: 'Check', // Player passes at making a bet.
-		FOLD: 'Fold', // Player gives up or refuses to call the highest bet.
-		BET: 'Bet', // Player makes the first bet of the round. 
-		CALL: 'Call', // Player calls high bet, and has chips left.
-		RAISE: 'Raise', // Player makes at least a minimum raise, and has chips still left.
-		ALLIN: 'All-In', // Player pushes rest of their chips (regardless of bet, call, or raise)
-		ToAct: 'ToAct', // Player has been prompted to make an action.
-		ShowDown: 'ShowDown', // Player has been prompted to show or muck cards.
-		MuckHand: 'MuckHand', // Player will not show hand.
-		ShowHand: 'ShowHand', // Player will show hand.
-		StartNextHand: 'StartNextHand',
-	};
 	Player.prototype = {
 		// Player checks. Nothing changes monetarily for player.
 		check: function() {
-			this.action = Player.Action.CHECK;
+			this.action = PlayerAction.Check;
 		},
 		// Player folds. Nothing changes monetarily for player.
 		fold: function() {
-			this.action = Player.Action.FOLD;
+			this.action = PlayerAction.Fold;
 		},
 		// Pulls an absolute amount from a player's stack.
 		// A player is all in when they bet everything in their stack.
 		absoluteBet: function(bet, action, pot, isNotLiveBet) {
 			if (bet >= this.stack) {
 				bet = this.stack;
-				action = Player.Action.ALLIN;
+				action = PlayerAction.AllIn;
 			}
 			this.stack -= bet;
 			if (!isNotLiveBet) {
@@ -651,37 +637,37 @@ function(pokerHandEvaluator,   moment,   constants) {
 		// For specificity, returns the ante removed from the player's stack.
 		// Also, note that antes do not count towards a player's live bet (not the same as a blind)
 		ante: function(ante, pot) {
-			return this.absoluteBet(ante, Player.Action.POSTANTE, pot, true);
+			return this.absoluteBet(ante, PlayerAction.PostAnte, pot, true);
 		},
 		// Player is posting a blind. Note this is synonymous to a bet with respect to stack.
 		// If you are blinding off the rest of your chips, you are all in.
 		// Otherwise, note that this records the person as having posted a blind.
 		postBlind: function(blind, pot) {
-			return this.absoluteBet(blind, Player.Action.POSTBLIND, pot);
+			return this.absoluteBet(blind, PlayerAction.PostBlind, pot);
 		},
 		// Player is bettting or raising.
 		// If you are betting the rest of your chips, you are all in.
 		// For specificity, returns the amount removed from the player's stack.
 		bet: function(bet, pot) {
-			return this.absoluteBet(bet, Player.Action.BET, pot);
+			return this.absoluteBet(bet, PlayerAction.Bet, pot);
 		},
 		// Player calls to match a current bet.
 		// Returns the amount removed from the player's stack in order to make the call.
 		call: function(totalBet, pot) {
-			return this.relativeBet(totalBet, Player.Action.CALL, pot);
+			return this.relativeBet(totalBet, PlayerAction.Call, pot);
 		},
 		// Player raises to certain amount, monetarily equivalent to making a call
 		// Returns the amount removed from the player's stack in order to make the raise.
 		raise: function(totalBet, pot) {
-			return this.relativeBet(totalBet, Player.Action.RAISE, pot);
+			return this.relativeBet(totalBet, PlayerAction.Raise, pot);
 		},
 		// Player bets the remainder of their chips.
 		allIn: function(pot) {
-			return this.absoluteBet(this.stack, Player.Action.ALLIN, pot);
+			return this.absoluteBet(this.stack, PlayerAction.AllIn, pot);
 		},
 		markHandShown: function(show) {
 			this.showHand = show;
-			this.action = (show ? Player.Action.ShowHand : Player.Action.MuckHand);
+			this.action = (show ? PlayerAction.ShowHand : PlayerAction.MuckHand);
 			this.handValue = (show ? this.fullHand.toString() : '');
 			this.askedToShow = true;
 		},

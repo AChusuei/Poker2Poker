@@ -7,7 +7,6 @@ define(['constants', 'underscore'], function(constants) {
 	var userName;
 	var remotePlayerInformation = {};
 	var table;
-
 	var MessageType = constants.MessageType;
 
 	var startApplication = function() {
