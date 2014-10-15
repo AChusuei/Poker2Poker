@@ -38,6 +38,24 @@ define(['underscore'], function() {
 				case Card.Rank.N: return 'Null';
 			}
 		},
+		getShortRankName: function() {
+			switch (this.rank) {
+				case Card.Rank.A: return 'A';
+				case Card.Rank.K: return 'K';
+				case Card.Rank.Q: return 'Q';
+				case Card.Rank.J: return 'J';
+				case Card.Rank.T: return '10';
+				case Card.Rank[9]: return '9';
+				case Card.Rank[8]: return '8';
+				case Card.Rank[7]: return '7';
+				case Card.Rank[6]: return '6';
+				case Card.Rank[5]: return '5';
+				case Card.Rank[4]: return '4';
+				case Card.Rank[3]: return '3';
+				case Card.Rank[2]: return '2';
+				case Card.Rank.N: return 'Null';
+			}
+		},
 		getRankNamePlural: function() {
 			var suffix = (this.rank === Card.Rank[6] ? 'es' : 's');
 			return this.getRankName() + suffix;
@@ -118,7 +136,7 @@ define(['underscore'], function() {
 				if (c !== 0) { 
 					ranks += ', '; 
 				}
-				ranks += this.cards[c].rank;
+				ranks += this.cards[c].getShortRankName();
 			}
 			ranks += ')';
 			return ranks;

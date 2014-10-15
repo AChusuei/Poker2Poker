@@ -199,6 +199,13 @@ function(pokerHandEvaluator,   moment,   constants) {
 			} else {
 				this.reconcilePots();
 				if (this.standUp()) {
+					_.each(this.nonFoldedPlayers(), function(player) {
+						player.flip = true;
+						player.showHand = true;
+						player.action = true
+					});
+					this.gameController.updateInterface();
+					this.gameController.broadcastInterfaceUpdate();
 					this.dealAllCommunityCardsToRiver();
 					this.resolvePotWinners();
 				} else if (++this.street === this.Street.SHOWDOWN || this.nonFoldedPlayers().length === 1) {
@@ -381,12 +388,16 @@ function(pokerHandEvaluator,   moment,   constants) {
 				potResolver.winners = potResolver.eligiblePlayers;
 				this.awardPotToWinnerAndMoveToNextPot(potResolver);
 			} else {
-				if (potResolver.eligiblePlayers[0].flip) { // played who got called MUST show
+				while (potResolver.eligiblePlayers.length > 0 && potResolver.eligiblePlayers[0].flip) { // played who got called MUST show
 					potResolver.currentEligiblePlayer = potResolver.eligiblePlayers.shift();
 					this.determineIfCurrentPlayerIsWinner(potResolver);
 					potResolver.currentEligiblePlayer.markHandShown(true);
 				}
-				this.promptPlayerToShowOrMuckHand(potResolver);
+				if (potResolver.eligiblePlayers.length > 0) {
+					this.promptPlayerToShowOrMuckHand(potResolver);
+				} else {
+					this.awardPotToWinnerAndMoveToNextPot(potResolver);
+				}
 			}
 		},
 		determineIfCurrentPlayerIsWinner: function(potResolver) {
@@ -668,7 +679,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 		markHandShown: function(show) {
 			this.showHand = show;
 			this.action = (show ? PlayerAction.ShowHand : PlayerAction.MuckHand);
-			this.handValue = (show ? this.fullHand.toString() : '');
+			this.handValue = (show && this.fullHand ? this.fullHand.toString() : '');
 			this.askedToShow = true;
 		},
 		resetForNewRound: function() {
