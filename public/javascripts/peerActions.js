@@ -48,7 +48,7 @@ define(['peer', 'constants'], function(peer, constants) {
 	    }
 	};
 
-	var initializeConnection = function(c) {
+	var initializeConnection = function(c, isSpectator) {
 		c.on('open', function() { 
 			console.log(c.peer + ' is open and ready for transmission.');
 			// Receive messages

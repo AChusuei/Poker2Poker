@@ -7,6 +7,7 @@ define(['constants', 'underscore'], function(constants) {
 	var userName;
 	var remotePlayerInformation = {};
 	var table;
+	var isHoleCameraSpectator = false;
 	var MessageType = constants.MessageType;
 
 	var startApplication = function() {
@@ -15,6 +16,9 @@ define(['constants', 'underscore'], function(constants) {
 
 	var startSession = function(u) {
 		userName = u;
+		if (userName === 'spectator') {
+			isHoleCameraSpectator = true;
+		}
 		peerActions.startSession(this);
 	};
 
@@ -23,7 +27,7 @@ define(['constants', 'underscore'], function(constants) {
 	}
 
 	var updateConnectedPlayers = function() {
-		components.updateConnectedPlayerTable(getRemotePlayers());
+		components.updateConnectedPlayerTable(getRemotePlayers(true));
 	};
 
 	var promptPlayerAction = function(player, options, callBack) {
@@ -86,13 +90,16 @@ define(['constants', 'underscore'], function(constants) {
 	var sendUserName = function(peerId) {
 		peerActions.sendMessage(peerId, {
 			type: MessageType.PlayerInformationResponse,
-			data: { userName: userName },
+			data: { 
+				userName: userName,
+				isHoleCameraSpectator: isHoleCameraSpectator,
+			},
 		});
 	}
 
 	var setRemoteUserInformation = function(peerId, info) {
 		remotePlayerInformation[peerId] = info;
-		updateConnectedPlayers(peerId);
+		updateConnectedPlayers();
 	} 
 
 	var promptRemotePlayerAction = function(peerId, options) {
@@ -120,11 +127,19 @@ define(['constants', 'underscore'], function(constants) {
 
 	var sanitizeTableForBroadcast = function(peerId) {
 		var cleanTable = JSON.parse(JSON.stringify(table));
-		_.each(cleanTable.players, function(player) {
-			if (player.peerId !== peerId && !player.showHand) {
-				player.hand = null;
-			}
-		});
+		var seeCards = false;
+		if (peerActions.getPeerId() === peerId) {
+			seeCards = isHoleCameraSpectator;
+		} else {
+			seeCards = remotePlayerInformation[peerId] && remotePlayerInformation[peerId].data.isHoleCameraSpectator;	
+		}
+		if (!seeCards) {
+			_.each(cleanTable.players, function(player) {
+				if (player.peerId !== peerId && !player.showHand) {
+					player.hand = null;
+				}
+			});
+		}
 		return cleanTable;
 	}
 
@@ -138,14 +153,16 @@ define(['constants', 'underscore'], function(constants) {
 		peerActions.connectToPeer(remotePeerId, propagate);
 	}
 
-	var getRemotePlayers = function() {
+	var getRemotePlayers = function(includeSpectators) {
 		var players = [];
         _.each(peerActions.getAllConnections(), function(connection) {
         	var userName = '';
         	if (connection.peer in remotePlayerInformation) {
         		userName = remotePlayerInformation[connection.peer].data.userName;
         	}
-        	players.push(poker.createPlayer(userName, connection.peer));
+        	if (includeSpectators || (connection.peer in remotePlayerInformation && !remotePlayerInformation[connection.peer].data.isHoleCameraSpectator)) {
+        		players.push(poker.createPlayer(userName, connection.peer));
+        	}
         });
         return players;
 	}

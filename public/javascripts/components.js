@@ -95,10 +95,11 @@ function(React,   gameController,   constants) {
     var ConnectedPlayer = React.createClass({
         render: function() {
             var player = this.props.player;
+            var c = (player.name === 'spectator' ? 'slant' : '');
             return (
                 <tr>
-                    <td>{player.peerId}</td>
-                    <td>{player.name}</td>
+                    <td className={c}>{player.peerId}</td>
+                    <td className={c}>{player.name}</td>
                     <td><button type="button" className="btn btn-success btn-xs" disabled="disabled">Connected</button></td>
                 </tr> 
             );  
@@ -146,7 +147,7 @@ function(React,   gameController,   constants) {
                 cards.push(<Card key={'card1'} card={this.props.player.hand[1]} />);
             }
             return (
-                <tr >
+                <tr>
                     <td className="peerId"><code>{this.props.player.peerId}</code></td>
                     <td className="userName">{this.props.player.name}</td>
                     <td className="button">
@@ -238,9 +239,11 @@ function(React,   gameController,   constants) {
                     buttonType = 'btn-warning' 
                     break;
                 case PlayerAction.Check:
-                case PlayerAction.ToAct:
                 case PlayerAction.YetToAct:
                     buttonType = 'btn-default' 
+                    break;
+                case PlayerAction.ToAct:
+                    buttonType = 'btn-default pulsate' 
                     break;
             };
             // var cx = React.addons.classSet;
