@@ -197,8 +197,9 @@ function(React,   gameController,   constants) {
             if (this.props.large) {
                 color += ' h2';
             }
+            var rank = (this.props.card.rank === 'T' ? '10' : this.props.card.rank);
             return (
-                <span className={color}>{this.props.card.rank}{symbol} </span>
+                <span className={color}>{rank}{symbol} </span>
             );
         }
     });
