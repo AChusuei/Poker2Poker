@@ -9,7 +9,6 @@ function(pokerHandEvaluator,   moment,   constants) {
 	function Table(players, startingStack, levels, gameController) {
 		this.initializePlayerPositions(players, startingStack);
 		this.randomizeButton(); 
-		this.deck = new playingCards();
 		this.handEvaluator = pokerHandEvaluator;
 		this.blindStructure = new BlindStructure(levels);
 		this.gameController = gameController;
@@ -52,7 +51,7 @@ function(pokerHandEvaluator,   moment,   constants) {
 			return this.players[this.currentPlayer];
 		},
 		dealCards: function() {
-			this.deck.shuffle();
+			this.deck = new playingCards();
 			// clear all player hands 
 			_.each(this.players, function(p) {
 				p.resetForNewRound();
@@ -182,8 +181,9 @@ function(pokerHandEvaluator,   moment,   constants) {
 			}
 		},
 		dealAllCommunityCardsToRiver: function() {
-			while (this.street++ !== this.Street.SHOWDOWN) {
+			while (this.street !== this.Street.SHOWDOWN) {
 				this.dealCommunityCards();
+				this.street++;
 			}
 		},
 		qa_dealAllCommunityCards: function() {
@@ -198,7 +198,9 @@ function(pokerHandEvaluator,   moment,   constants) {
 				this.promptNextPlayerToAct();
 			} else {
 				this.reconcilePots();
-				if (this.standUp()) {
+				if (this.street === this.Street.RIVER || this.nonFoldedPlayers().length === 1) {
+					this.resolvePotWinners(); 
+				} else if (this.standUp()) {
 					_.each(this.nonFoldedPlayers(), function(player) {
 						player.flip = true;
 						player.showHand = true;
@@ -208,9 +210,8 @@ function(pokerHandEvaluator,   moment,   constants) {
 					this.gameController.broadcastInterfaceUpdate();
 					this.dealAllCommunityCardsToRiver();
 					this.resolvePotWinners();
-				} else if (++this.street === this.Street.SHOWDOWN || this.nonFoldedPlayers().length === 1) {
-					this.resolvePotWinners();
 				} else {
+					this.street++;
 					this.dealCommunityCards();
 					this.startStreet();
 				}
