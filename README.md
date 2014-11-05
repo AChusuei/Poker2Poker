@@ -1,7 +1,9 @@
 Texas Hold'Em Poker P2P Game
 =========
 
-A P2P Poker application that is designed to work without a central server.
+A P2P Poker application that is designed to work without a central server. 
+
+Well almost, since we're using WebRTC, we still need a signaling server to bootstrap two peers to connect to one another. But once that's done, the game is run completely between peers!
 
 Most of the functionality, if you are interested, lives in the public/javascripts folder.
 
