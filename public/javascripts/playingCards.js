@@ -65,12 +65,6 @@ if (Array.indexOf === undefined) {
                     this.cards[l] = new playingCards.card(r, o.ranks[r], s, o.suits[s]);
                 }
             }
-            // jokers
-            for (j = 0; j < o.jokers; j++) {
-                l = this.cards.length;
-                // suit will always be 1 or 2
-                this.cards[l] = new playingCards.card("N", o.jokerText, (j % 2) + 1, '');
-            }
         }
     };
     // TODO: create more methods:
@@ -165,7 +159,7 @@ if (Array.indexOf === undefined) {
             "7": "Seven",
             "8": "Eight",
             "9": "Nine",
-            "10": "Ten",
+            "T": "Ten",
             "J": "Jack",
             "Q": "Queen",
             "K": "King",

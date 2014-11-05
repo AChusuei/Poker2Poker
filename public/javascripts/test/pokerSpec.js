@@ -23,20 +23,42 @@ define(['poker', 'moment'], function(poker, moment) {
         }
     }
 
+    function expectContainsAll(expected, actual) {
+        expect(actual.length).toEqual(expected.length);
+        _.each(actual.actions, function(item) {                
+            expect(_.contains(expected, item)).toBeTruthy();
+        });
+    }
+
+    var playerOneWins = { compare: function() { return -1; } };
+    var playerTwoWins = { compare: function() { return 1; } };
+    var playersTie = { compare: function() { return 0; } };
+    var playersTieThenRestLose = { 
+        counter: -1,
+        compare: function() {
+            return (++this.counter === 0 ? 0 : -1); 
+        } 
+    };
+
     describe('A Table', function() {
 
         beforeEach(function() {
             this.poker = poker;
             var newPlayers = [];
             _.each(allPlayers, function(p) {
-                newPlayers.push(poker.createPlayer(p.name, startingStack));
+                newPlayers.push(poker.createPlayer(p.name, '', startingStack));
             });
-            this.table = poker.createTable(newPlayers);
-            var blindStructure = poker.createBlindStructure(startingStack, levels);
-            this.table.blinds = blindStructure.getBlindLevel();
+            this.table = poker.createTable(newPlayers, startingStack, levels);
+            this.table.blindStructure.determineBlindLevel();
             _.each(this.table.players, function(player) {
                 player.action = poker.Player.Action.YETTOACT;
             }, this);
+            this.table.handEvaluator = jasmine.createSpyObj('this.table.handEvaluator', ['evaluateHand']);
+        });
+
+        xit('prints jasmine version', function() {
+            console.log('jasmine-version2?:' + jasmine.version);
+            console.log('jasmine-version1.3?:' + jasmine.getEnv().versionString());
         });
 
         it('should have its players initialized and randomized properly', function() {
@@ -56,8 +78,8 @@ define(['poker', 'moment'], function(poker, moment) {
 
         it('should choose the player after the button when choosing the next player for the first time', function() {
             var nextPlayer = this.table.nextLivePlayer();
-            expect((nextPlayer.seat == this.table.button + 1) || // button not on last player
-                (nextPlayer.seat == 0 && this.table.button == this.table.getNumberOfPlayers() - 1)).toBeTruthy();  // button on last player
+            expect((nextPlayer.seat === this.table.button + 1) || // button not on last player
+                (nextPlayer.seat === 0 && this.table.button === this.table.getNumberOfPlayers() - 1)).toBeTruthy();  // button on last player
         });
 
         it('should go only with players who actually have chips', function() {
@@ -87,7 +109,7 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should deal two cards to every player when everyone has chips in their stack', function() {
-            this.table.dealCardsAndSetRoundStatus();
+            this.table.dealCards();
             _.each(this.table.players, function(player) {
                 // console.info('player:' + p.name + ' | cards:' + p.hand);
                 expect(player.hand.length).toEqual(2);
@@ -97,9 +119,9 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should deal cards only to players that have chips in their stack', function() {
             this.table.players[2].stack = 0;
             this.table.players[4].stack = 0;
-            this.table.dealCardsAndSetRoundStatus();
+            this.table.dealCards();
             _.each(this.table.players, function(player, i) {
-                if (player.stack == 0) {
+                if (player.stack === 0) {
                     expect(player.hand.length).toEqual(0);
                 } else {
                     expect(player.hand.length).toEqual(2);    
@@ -108,14 +130,14 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should have an initial pot equal equal to (# of players * ante + big blind + small blind) after posting blinds and antes', function() {
-            var blindLevel = this.table.blinds;
+            var blindLevel = this.table.blindStructure.getBlindLevel();
             var pot = this.table.postBlindsAndAntes();
-            expect(pot.amount).toEqual((this.table.getNumberOfPlayers() * blindLevel.ante) + blindLevel.smallBlind + blindLevel.bigBlind);
+            expect(this.table.getCurrentPot().amount).toEqual((this.table.getNumberOfPlayers() * blindLevel.ante) + blindLevel.smallBlind + blindLevel.bigBlind);
         });
 
         it('should only post blinds and antes from the correct positions (after the button)', function() {
-            var blindLevel = this.table.blinds;
-            var pot = this.table.postBlindsAndAntes();
+            var blindLevel = this.table.blindStructure.getBlindLevel();
+            this.table.postBlindsAndAntes();
             // reset current player cursor to make it easier to find the players after the button
             this.table.currentPlayer = this.table.button; 
             var sbPlayer = this.table.nextLivePlayer();
@@ -124,18 +146,18 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(sbPlayer.liveBet).toEqual(blindLevel.smallBlind);
             expect(bbPlayer.stack).toEqual(startingStack - blindLevel.bigBlind - blindLevel.ante);
             expect(bbPlayer.liveBet).toEqual(blindLevel.bigBlind);
-            expect(pot.isEligible(sbPlayer)).toBeTruthy();
-            expect(pot.isEligible(bbPlayer)).toBeTruthy();
+            expect(this.table.getCurrentPot().isEligible(sbPlayer)).toBeTruthy();
+            expect(this.table.getCurrentPot().isEligible(bbPlayer)).toBeTruthy();
 
             // Check rest of table for antes withdrawal
-            while (this.table.nextLivePlayer().seat != this.table.button) {
+            while (this.table.nextLivePlayer().seat !== this.table.button) {
                 var nonBlindPlayer = this.table.players[this.table.currentPlayer];
                 expect(nonBlindPlayer.stack).toEqual(startingStack - blindLevel.ante);
             } 
         });
 
         it('should only post blinds from players who still have chips', function() {
-            var blindLevel = this.table.blinds;
+            var blindLevel = this.table.blindStructure.getBlindLevel();
             // reset current player cursor to make it easier to find the players after the button
             this.table.button = 0;
             this.table.currentPlayer = this.table.button; 
@@ -151,12 +173,11 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should make the button the small blind when it is heads up (two players)', function() {
             var newPlayers = [];
             _.each(_.sample(allPlayers, 2), function(p) {
-                newPlayers.push(poker.createPlayer(p.name, startingStack));
+                newPlayers.push(poker.createPlayer(p.name, '', startingStack));
             });
-            this.table = poker.createTable(newPlayers);
-            var blindStructure = poker.createBlindStructure(startingStack, levels);
-            this.table.blinds = blindStructure.getBlindLevel();
-            var blindLevel = this.table.blinds;
+            this.table = poker.createTable(newPlayers, startingStack, levels);
+            this.table.blindStructure.determineBlindLevel();
+            var blindLevel = this.table.blindStructure.getBlindLevel();
             // reset current player cursor to make it easier to find the players after the button
             this.table.button = 0;
             this.table.currentPlayer = this.table.button; 
@@ -170,7 +191,7 @@ define(['poker', 'moment'], function(poker, moment) {
         it('should move the button to the next player', function() {
             var originalButton = this.table.button;
             this.table.moveButton();
-            if (originalButton == this.table.getNumberOfPlayers() - 1) {
+            if (originalButton === this.table.getNumberOfPlayers() - 1) {
                 expect(this.table.button).toEqual(0);
             } else {
                 expect(this.table.button).toEqual(originalButton+ 1);
@@ -194,15 +215,11 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(winner).toBeFalsy();
         });
 
-        xit('should have more tests for playing hands', function() {
-            
-        });
-
         it('does not ends the pre-flop street when players still left to act', function() {
             this.table.postBlindsAndAntes();
             do { // get all non-blind players to fold.
                 this.table.nextLivePlayer().fold();   
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             // small blind still left to Act
             expect(this.table.isStreetOver()).toBeFalsy();
         });
@@ -211,7 +228,7 @@ define(['poker', 'moment'], function(poker, moment) {
             this.table.postBlindsAndAntes(); 
             do { // get all non-blind players to fold.
                 this.table.nextLivePlayer().fold();   
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             // small blind folds ... 
             this.table.nextLivePlayer().fold();
             expect(this.table.isStreetOver()).toBeTruthy();
@@ -221,9 +238,9 @@ define(['poker', 'moment'], function(poker, moment) {
             this.table.postBlindsAndAntes(); 
             do { // get all non-blind players to fold.
                 this.table.nextLivePlayer().fold();   
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             // small blind calls big blind ... 
-            this.table.nextLivePlayer().call(this.table.blinds.bigBlind);
+            this.table.nextLivePlayer().call(this.table.blindStructure.getBlindLevel().bigBlind);
             expect(this.table.isStreetOver()).toBeFalsy();
         });
 
@@ -256,16 +273,44 @@ define(['poker', 'moment'], function(poker, moment) {
                 } else {
                     this.table.nextLivePlayer().check();
                 }
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             expect(this.table.isStreetOver()).toBeTruthy();
         });
 
         it('should end a street when all players have folded to a donk bet', function() {
-            this.table.nextLivePlayer().bet(45);
+            this.table.pots = [this.table.startPot()];
+            this.table.getCurrentPot().amount = 100;
+            var player = this.table.nextLivePlayer();
+            player.bet(45, this.table.getCurrentPot());
             do {
                 this.table.nextLivePlayer().fold();
-            } while (this.table.currentPlayer != this.table.button);
+            } while (this.table.currentPlayer !== this.table.button);
             expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            expect(this.table.getCurrentPot().amount).toEqual(145);
+        });
+
+        it('should end a street when button calls a donk bet', function() {
+            var smallBet = startingStack / 10;
+            this.table.pots = [this.table.startPot()];
+            var firstPlayer = this.table.nextLivePlayer();
+            firstPlayer.bet(smallBet, this.table.getCurrentPot());
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone to the button folds
+                this.table.nextLivePlayer().fold();
+            }
+            // button calls
+            var button = this.table.nextLivePlayer(); 
+            button.call(smallBet, this.table.getCurrentPot());
+            expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            var mainPot = this.table.pots.pop();
+            expect(mainPot.amount).toEqual(smallBet * 2);
+            expect(mainPot.isEligible(firstPlayer)).toBeTruthy();
+            expect(mainPot.isEligible(button)).toBeTruthy();
+            expect(this.table.pots.length).toEqual(0);
+            _.each(this.table.players, function(player) {
+                expect(player.liveBet).toEqual(0);
+            });
         });
 
         it('should not end a street when all players have not folded to a donk bet', function() {
@@ -324,45 +369,126 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should end a street when re-raise is called', function() {
+            this.table.pots = [this.table.startPot()];
+            var currentPot = this.table.getCurrentPot();
             for (s = 0; s < this.table.getNumberOfPlayers() - 1; s++) { 
                 this.table.nextLivePlayer().check();
             }; // everyone checks to the button
-            this.table.nextLivePlayer().bet(66); // button bets in position
+            var button = this.table.nextLivePlayer();
+            button.bet(66, currentPot); // button bets in position
             for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { 
                 this.table.nextLivePlayer().fold();
             }; // everyone folds except the cutoff (player b4 the button)
-            this.table.nextLivePlayer().bet(200); // cutoff 3-bets (raises)
-            this.table.nextLivePlayer().raise(400); // button 4-bets (min re-raises)
-            this.table.nextLivePlayer().call(400); // cutoff calls
+            var cutoff = this.table.nextLivePlayer();
+            cutoff.raise(200, currentPot); // cutoff 3-bets (raises)
+            button.raise(400, currentPot); // button 4-bets (min re-raises)
+            cutoff.call(400, currentPot); // cutoff calls
             expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            var mainPot = this.table.pots.pop();
+            expect(mainPot.amount).toEqual(800);
+            expect(mainPot.isEligible(cutoff)).toBeTruthy();
+            expect(mainPot.isEligible(button)).toBeTruthy();
+            expect(this.table.pots.length).toEqual(0);
+            _.each(this.table.players, function(player) {
+                expect(player.liveBet).toEqual(0);
+            });
         });
 
         it('should end a street when remaining player is allIn for call amount', function() {
+            this.table.pots = [this.table.startPot()];
             var firstPlayer = this.table.nextLivePlayer();
             firstPlayer.stack = startingStack * 2; // ensure that starting stack bet is not allIn for first player
-            firstPlayer.bet(startingStack);
+            firstPlayer.bet(startingStack, this.table.getCurrentPot());
             for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone to the button folds
                 this.table.nextLivePlayer().fold();
             }
             // button moves allIn;
-            this.table.nextLivePlayer().call(startingStack); // should be an all in.
+            var button = this.table.nextLivePlayer(); 
+            button.call(startingStack, this.table.getCurrentPot()); // should be an all in.
             expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            var sidePot = this.table.pots.pop();
+            expect(sidePot.amount).toEqual(0); // new pot should have been created.
+            expect(sidePot.isAnyoneEligible()).toBeFalsy();
+            var mainPot = this.table.pots.pop();
+            expect(mainPot.amount).toEqual(startingStack * 2);
+            expect(mainPot.isEligible(firstPlayer)).toBeTruthy();
+            expect(mainPot.isEligible(button)).toBeTruthy();
+            expect(this.table.pots.length).toEqual(0);
+            _.each(this.table.players, function(player) {
+                expect(player.liveBet).toEqual(0);
+            });
         });
 
         it('should end a street when remaining player is allIn but lower than call amount', function() {
+            this.table.pots = [this.table.startPot()];
+            var firstPlayer = this.table.nextLivePlayer();
             var smallBet = startingStack / 10; 
-            this.table.nextLivePlayer().bet(smallBet);
+            firstPlayer.bet(smallBet, this.table.getCurrentPot());
             for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone to the button folds
                 this.table.nextLivePlayer().fold();
             }
             // button moves allIn but doesn't have enough to cover the call amount
             var button = this.table.nextLivePlayer();
-            button.startingStack = smallBet - (smallBet / 2);
-            button.call(smallBet); // should be an all in.
+            button.stack = smallBet / 2;
+            button.call(smallBet, this.table.getCurrentPot()); // should be an all in.
             expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            var sidePot = this.table.pots.pop();
+            expect(sidePot.amount).toEqual(smallBet / 2); // new pot, has skim of button's call.
+            expect(sidePot.isEligible(firstPlayer)).toBeTruthy();
+            expect(sidePot.isEligible(button)).toBeFalsy();
+            var mainPot = this.table.pots.pop();
+            expect(mainPot.amount).toEqual(smallBet); // since the button only has (smallBet / 2), can only win smallBet amount
+            expect(mainPot.isEligible(firstPlayer)).toBeTruthy();
+            expect(mainPot.isEligible(button)).toBeTruthy();
+            expect(this.table.pots.length).toEqual(0);
+            _.each(this.table.players, function(player) {
+                expect(player.liveBet).toEqual(0);
+            });
         });
 
-        it('should not end a street when remaining player is allIn raise', function() {
+        it('should end a street when several players are allIn with bets lower than call amount ', function() {
+            this.table.pots = [this.table.startPot()];
+            var smallblind = this.table.nextLivePlayer();
+            var smallBet = 200; 
+            smallblind.bet(smallBet, this.table.getCurrentPot());
+            for (s = 0; s < this.table.getNumberOfPlayers() - 3; s++) { // everyone to the cutoff folds
+                this.table.nextLivePlayer().fold();
+            }
+            // cutoff moves allIn but doesn't have enough to cover the call amount
+            var cutoff = this.table.nextLivePlayer();
+            cutoff.stack = 100;
+            cutoff.call(200, this.table.getCurrentPot()); // should be an all in, only eligible for 100
+            // button moves allIn but doesn't have enough to cover the call amount
+            var button = this.table.nextLivePlayer();
+            button.stack = 150;
+            button.call(200, this.table.getCurrentPot()); // should be an all in, only eligible for 150
+            expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            var sidePotOne = this.table.pots.pop();
+            expect(sidePotOne.amount).toEqual(50);
+            expect(sidePotOne.isEligible(smallblind)).toBeTruthy();
+            expect(sidePotOne.isEligible(cutoff)).toBeFalsy();
+            expect(sidePotOne.isEligible(button)).toBeFalsy();
+            var sidePotTwo = this.table.pots.pop();
+            expect(sidePotTwo.amount).toEqual(100);
+            expect(sidePotTwo.isEligible(smallblind)).toBeTruthy();
+            expect(sidePotTwo.isEligible(cutoff)).toBeFalsy();
+            expect(sidePotTwo.isEligible(button)).toBeTruthy();
+            var mainPot = this.table.pots.pop();
+            expect(mainPot.amount).toEqual(300);
+            expect(mainPot.isEligible(smallblind)).toBeTruthy();
+            expect(mainPot.isEligible(cutoff)).toBeTruthy();
+            expect(mainPot.isEligible(button)).toBeTruthy();
+            expect(this.table.pots.length).toEqual(0);
+            _.each(this.table.players, function(player) {
+                expect(player.liveBet).toEqual(0);
+            });
+        });
+
+        it('should not end a street when remaining player is allIn raise over current high bet', function() {
             var smallBet = startingStack / 10; 
             this.table.nextLivePlayer().bet(smallBet);
             for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone to the button folds
@@ -375,17 +501,172 @@ define(['poker', 'moment'], function(poker, moment) {
             expect(this.table.isStreetOver()).toBeFalsy();
         });
 
-        function expectContainsAll(expected, actual) {
-            expect(actual.length).toEqual(expected.length);
-            _.each(actual.actions, function(item) {                
-                expect(_.contains(expected, item)).toBeTruthy();
+        it('should resolve pot winners for single pot and two players, where player one is the winner', function() {
+            this.table.qa_dealAllCommunityCards();
+            var smallBet = startingStack / 10;
+            this.table.pots = [this.table.startPot()];
+            var smallBlind = this.table.nextLivePlayer();
+            smallBlind.bet(smallBet, this.table.getCurrentPot());
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone folds to the button
+                this.table.nextLivePlayer().fold();
+            }
+            // button calls
+            var button = this.table.nextLivePlayer(); 
+            button.call(smallBet, this.table.getCurrentPot());
+            expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            this.table.handEvaluator.evaluateHand.andCallFake(function() { return playerOneWins; });
+            this.table.resolvePotWinners();
+            expect(smallBlind.stack).toEqual(startingStack + smallBet);
+            expect(button.stack).toEqual(startingStack - smallBet);
+        });
+
+        it('should resolve pot winners for single pot and two players, where players tie', function() {
+            this.table.qa_dealAllCommunityCards();
+            var smallBet = startingStack / 10;
+            this.table.pots = [this.table.startPot()];
+            var smallBlind = this.table.nextLivePlayer();
+            smallBlind.bet(smallBet, this.table.getCurrentPot());
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone folds to the button
+                this.table.nextLivePlayer().fold();
+            }
+            // button calls
+            var button = this.table.nextLivePlayer(); 
+            button.call(smallBet, this.table.getCurrentPot());
+            expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            this.table.handEvaluator.evaluateHand.andCallFake(function() { return playersTie; });
+            this.table.resolvePotWinners();
+            expect(smallBlind.stack).toEqual(startingStack);
+            expect(button.stack).toEqual(startingStack);
+        });
+
+        it('should award winner all the money in the pot when people have bet but later fold', function() {
+            this.table.pots = [this.table.startPot()];
+            var smallBet = startingStack / 10;
+            var smallBlind = this.table.nextLivePlayer();
+            smallBlind.bet(smallBet, this.table.getCurrentPot());
+            for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { // everyone folds to the button
+                this.table.nextLivePlayer().fold();
+            }
+            var button = this.table.nextLivePlayer(); 
+            button.raise(smallBet * 2, this.table.getCurrentPot());
+            smallBlind.call(smallBet * 2, this.table.getCurrentPot());
+            expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            smallBlind.check();
+            button.bet(smallBet * 4, this.table.getCurrentPot()); // pot sized bet;
+            smallBlind.fold();
+            expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePotWinners();
+            expect(smallBlind.stack).toEqual(startingStack - (smallBet * 2));
+            expect(button.stack).toEqual(startingStack + (smallBet * 2));
+        });
+
+        it('should split money with high tie-ers when multiple pots are awarded', function() {
+            this.table.qa_dealAllCommunityCards();
+            this.table.pots = [this.table.startPot()];
+            var smallBet = startingStack / 10;
+            var smallBlind = this.table.nextLivePlayer();
+            smallBlind.bet(smallBet, this.table.getCurrentPot());
+            var bigBlind = this.table.nextLivePlayer();
+            bigBlind.allIn(this.table.getCurrentPot());
+            for (s = 0; s < this.table.getNumberOfPlayers() - 4; s++) { // everyone folds to the cutoff
+                this.table.nextLivePlayer().fold();
+            }
+            var cutoff = this.table.nextLivePlayer();
+            cutoff.stack = 400;
+            cutoff.allIn(this.table.getCurrentPot());
+            var button = this.table.nextLivePlayer();
+            button.stack = 300;
+            button.allIn(this.table.getCurrentPot());
+            smallBlind.allIn(this.table.getCurrentPot());
+            expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            this.table.handEvaluator.evaluateHand.andCallFake(function() { return playersTieThenRestLose; });
+            this.table.resolvePotWinners();
+            expect(smallBlind.stack).toEqual(850);
+            expect(bigBlind.stack).toEqual(850);
+            expect(cutoff.stack).toEqual(0);
+            expect(button.stack).toEqual(0);
+        });
+
+        it('should resolve pot winners for single pot and three players, where last player wins', function() {
+            this.table.qa_dealAllCommunityCards();
+            var smallBet = 50;
+            this.table.pots = [this.table.startPot()];
+            var smallBlind = this.table.nextLivePlayer();
+            smallBlind.bet(smallBet, this.table.getCurrentPot());
+            for (s = 0; s < this.table.getNumberOfPlayers() - 3; s++) { // everyone folds to the cutoff
+                this.table.nextLivePlayer().fold();
+            }
+            // cutoff calls
+            var cutoff = this.table.nextLivePlayer(); 
+            cutoff.call(smallBet, this.table.getCurrentPot());
+            // button calls
+            var button = this.table.nextLivePlayer(); 
+            button.call(smallBet, this.table.getCurrentPot());
+            expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.resolvePots();
+            this.table.handEvaluator.evaluateHand.andCallFake(function() { return playerTwoWins; });
+            this.table.resolvePotWinners();
+            expect(smallBlind.stack).toEqual(startingStack - smallBet);
+            expect(cutoff.stack).toEqual(startingStack - smallBet);
+            expect(button.stack).toEqual(startingStack + (2 * smallBet));
+        });
+
+        // to fix, location of button makes winner indetermindate with the mock as below.
+        xit('should resolve pot winners for main and side pot and three players, where button wins', function() {
+            this.button = 0
+            this.curentPlayer = 0;
+            this.table.qa_dealAllCommunityCards();
+            var smallBet = 200;
+            this.table.pots = [this.table.startPot()];
+            var smallBlind = this.table.nextLivePlayer();
+            smallBlind.stack = 200; 
+            smallBlind.allIn(this.table.getCurrentPot());
+            for (s = 0; s < this.table.getNumberOfPlayers() - 3; s++) { // everyone folds to the cutoff
+                this.table.nextLivePlayer().fold();
+            }
+            var cutoff = this.table.nextLivePlayer(); 
+            cutoff.allIn(this.table.getCurrentPot());
+            var button = this.table.nextLivePlayer();
+            button.stack = 400; 
+            button.allIn(this.table.getCurrentPot());
+            expect(this.table.isStreetOver()).toBeTruthy();
+            this.table.getStatus();
+            this.table.resolvePots();
+            // console.log('pots',this.table.pots); // too dependent on when people fold. 
+            this.table.handEvaluator.evaluateHand.andCallFake(function() { return playerTwoWins; });
+            this.table.resolvePotWinners();
+            expect(smallBlind.stack).toEqual(0);
+            expect(cutoff.stack).toEqual(100); // ?? 
+            expect(button.stack).toEqual(1000); // ??
+        });
+
+        it('should formulate base action options when it is heads up (two players)', function() {
+            var newPlayers = [];
+            _.each(_.sample(allPlayers, 2), function(p) {
+                newPlayers.push(poker.createPlayer(p.name, '', startingStack));
             });
-        }
+            this.table = poker.createTable(newPlayers, startingStack, levels);
+            this.table.blindStructure.determineBlindLevel();
+            var blindLevel = this.table.blindStructure.getBlindLevel();
+            // reset current player cursor to make it easier to find the players after the button
+            this.table.button = 0;
+            this.table.currentPlayer = this.table.button; 
+            this.table.postBlindsAndAntes();
+            var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
+            expect(options.callBet).toEqual(30);
+            expect(options.minimumRaise).toEqual(this.table.blindStructure.getBlindLevel().bigBlind * 2);
+            var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
+            expectContainsAll(expectedActions, options.actions);
+        });
 
         it('should formulate base action options when no one has acted yet and small blind has ten big blinds in stack', function() {
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
             expect(options.callBet).toEqual(0);
-            expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind);
+            expect(options.minimumRaise).toEqual(this.table.blindStructure.getBlindLevel().bigBlind);
             var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
             expectContainsAll(expectedActions, options.actions);
         });
@@ -396,7 +677,7 @@ define(['poker', 'moment'], function(poker, moment) {
             }; // everyone checks to the button
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
             expect(options.callBet).toEqual(0);
-            expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind);
+            expect(options.minimumRaise).toEqual(this.table.blindStructure.getBlindLevel().bigBlind);
             var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CHECK, poker.Player.Action.BET];
             expectContainsAll(expectedActions, options.actions);
         });
@@ -428,7 +709,6 @@ define(['poker', 'moment'], function(poker, moment) {
             for (s = 0; s < this.table.getNumberOfPlayers() - 2; s++) { 
                 this.table.nextLivePlayer().fold();
             }; // check to button
-            // this.table.getPlayerBetStatus();
             var options = this.table.formulateActionOptions(button);
             expect(options.callBet).toEqual(buttonAllIn);
             expect(options.minimumRaise).toEqual(buttonAllIn);
@@ -452,17 +732,18 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should formulate correct action options when small blind opens with a minimum bet (amount of big blind)', function() {
-            this.table.nextLivePlayer().bet(this.table.blinds.bigBlind); // small blind opens
+            this.table.nextLivePlayer().bet(this.table.blindStructure.getBlindLevel().bigBlind); // small blind opens
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
-            expect(options.callBet).toEqual(this.table.blinds.bigBlind);
-            expect(options.minimumRaise).toEqual(this.table.blinds.bigBlind * 2);
+            expect(options.callBet).toEqual(this.table.blindStructure.getBlindLevel().bigBlind);
+            expect(options.minimumRaise).toEqual(this.table.blindStructure.getBlindLevel().bigBlind * 2);
             var expectedActions = [poker.Player.Action.FOLD, poker.Player.Action.ALLIN, poker.Player.Action.CALL, poker.Player.Action.RAISE];
             expectContainsAll(expectedActions, options.actions);
         });
 
         it('should formulate correct action options for big blind when small blind opens with a larger than minimum bet', function() {
-            var largerThanMinBet = this.table.blinds.bigBlind * 2;
-            this.table.nextLivePlayer().bet(largerThanMinBet);
+            var largerThanMinBet = this.table.blindStructure.getBlindLevel().bigBlind * 2;
+            var nlp = this.table.nextLivePlayer();
+            nlp.bet(largerThanMinBet);
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
             expect(options.callBet).toEqual(largerThanMinBet);
             expect(options.minimumRaise).toEqual(largerThanMinBet * 2);
@@ -471,8 +752,8 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should formulate correct action options for UTG when small blind is raised by big blind', function() {
-            var bet = this.table.blinds.bigBlind * 2;
-            var raise = this.table.blinds.bigBlind * 4;
+            var bet = this.table.blindStructure.getBlindLevel().bigBlind * 2;
+            var raise = this.table.blindStructure.getBlindLevel().bigBlind * 4;
             this.table.nextLivePlayer().bet(bet);
             this.table.nextLivePlayer().raise(raise);
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
@@ -483,8 +764,8 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should formulate correct action options for UTG when small blind is raised by big blind', function() {
-            var bet = this.table.blinds.bigBlind * 2;
-            var raise = this.table.blinds.bigBlind * 4;
+            var bet = this.table.blindStructure.getBlindLevel().bigBlind * 2;
+            var raise = this.table.blindStructure.getBlindLevel().bigBlind * 4;
             this.table.nextLivePlayer().bet(bet);
             this.table.nextLivePlayer().raise(raise);
             var options = this.table.formulateActionOptions(this.table.nextLivePlayer());
@@ -498,31 +779,41 @@ define(['poker', 'moment'], function(poker, moment) {
     describe('A Pot', function() {
 
         beforeEach(function() {
-            this.boy = poker.createPlayer('Alan', 3000);
-            this.girl = poker.createPlayer('Christina', 5000);
+            this.boy = poker.createPlayer('Alan', '', 3000);
+            this.girl = poker.createPlayer('Christina', '', 5000);
             this.pot = poker.createPot();
         });        
 
         it('should make a player eligible for the pot when player adds money to the pot', function() {
-            this.pot.build(this.boy.bet(500), this.boy);
+            this.boy.bet(500, this.pot);
             expect(this.pot.amount).toEqual(500);
+            expect(this.pot.isAnyoneEligible(this.boy)).toBeTruthy();
             expect(this.pot.isEligible(this.boy)).toBeTruthy();
             expect(this.pot.isEligible(this.girl)).toBeFalsy();
         });
 
         it('should make multiple players eligible for the pot when more than one player adds money to the pot', function() {
-            this.pot.build(this.boy.bet(500), this.boy);
-            this.pot.build(this.boy.bet(1000), this.girl);
+            this.boy.bet(500, this.pot);
+            this.girl.bet(1000, this.pot);
             expect(this.pot.amount).toEqual(1500);
+            expect(this.pot.isAnyoneEligible(this.boy)).toBeTruthy();
             expect(this.pot.isEligible(this.boy)).toBeTruthy();
             expect(this.pot.isEligible(this.girl)).toBeTruthy();
         });
 
         it('should make player eligible for the pot when multiple bets made', function() {
-            this.pot.build(this.boy.bet(500), this.boy);
-            this.pot.build(this.boy.bet(667), this.boy);
+            this.boy.bet(500, this.pot);
+            this.boy.bet(667, this.pot);
             expect(this.pot.amount).toEqual(1167);
+            expect(this.pot.isAnyoneEligible(this.boy)).toBeTruthy();
             expect(this.pot.isEligible(this.boy)).toBeTruthy();
+            expect(this.pot.isEligible(this.girl)).toBeFalsy();
+        });
+
+        it('should have no players eligible when no one has bet into pot', function() {
+            expect(this.pot.amount).toEqual(0);
+            expect(this.pot.isAnyoneEligible(this.boy)).toBeFalsy();
+            expect(this.pot.isEligible(this.boy)).toBeFalsy();
             expect(this.pot.isEligible(this.girl)).toBeFalsy();
         });
 
@@ -531,18 +822,17 @@ define(['poker', 'moment'], function(poker, moment) {
     describe('A BlindStructure', function() {
 
         beforeEach(function() {
-            this.blindStructure = poker.createBlindStructure(startingStack, levels);
+            this.blindStructure = poker.createBlindStructure(levels);
         });
 
         it('should be initialized properly', function() {
-            expect(this.blindStructure.startingStack).toEqual(startingStack);
             expect(this.blindStructure.levels.length).toEqual(levels.length);
         });
 
         it('should pull the first blind level when getBlindLevel is called the first time', function() {
             // add just a tiny delay in case test runs too fast
             var testTime = moment().subtract(1, 'ms');
-            var level = this.blindStructure.getBlindLevel();
+            var level = this.blindStructure.determineBlindLevel();
 
             expect(level.smallBlind).toEqual(15);
             expect(level.bigBlind).toEqual(30);
@@ -552,12 +842,12 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should move to the next level when the time for the level is up.', function() {
-            var level = this.blindStructure.getBlindLevel();
+            var level = this.blindStructure.determineBlindLevel();
             // add just a tiny delay in case test runs too fast
             var lastChangeTime = this.blindStructure.lastTimeBlindsWentUp.clone().subtract(1, 'ms');
             this.blindStructure.lastTimeBlindsWentUp.subtract(level.min + 2, 'minutes');
 
-            var newLevel = this.blindStructure.getBlindLevel();
+            var newLevel = this.blindStructure.determineBlindLevel();
             expect(newLevel.smallBlind).toEqual(20);
             expect(newLevel.bigBlind).toEqual(40);
             expect(newLevel.ante).toEqual(2);
@@ -566,11 +856,11 @@ define(['poker', 'moment'], function(poker, moment) {
         });
 
         it('should NOT move to the next level when the time for the level is not yet up', function() {
-            var level = this.blindStructure.getBlindLevel();
+            var level = this.blindStructure.determineBlindLevel();
             var lastChangeTime = this.blindStructure.lastTimeBlindsWentUp.clone();
 
             // assuming the blind levels are at least a few seconds ...
-            var newLevel = this.blindStructure.getBlindLevel();
+            var newLevel = this.blindStructure.determineBlindLevel();
             expect(level.smallBlind).toEqual(15);
             expect(level.bigBlind).toEqual(30);
             expect(level.ante).toEqual(1);
@@ -586,7 +876,7 @@ define(['poker', 'moment'], function(poker, moment) {
         var smallBet = 50;
 
         beforeEach(function() {
-            this.player = poker.createPlayer(name, startingStack);
+            this.player = poker.createPlayer(name, '', startingStack);
         });
 
         it('should be initialized properly', function() {

@@ -1,8 +1,3 @@
-body {
-  padding-top: 70px;
-  padding-bottom: 30px;
-}
-
 .theme-dropdown .dropdown-menu {
   position: static;
   display: block;
@@ -15,4 +10,55 @@ body {
 
 .theme-showcase .navbar .container {
   width: auto;
+}
+
+.form-control-inline {
+    min-width: 0;
+    width: auto;
+    display: inline;
+    vertical-align: middle;
+}
+
+.small-width {
+	width: 75px;
+}
+
+span.redsuit {
+     color: #CC0000;
+}
+
+span.blacksuit {
+     color: black;
+}
+
+td.slant {
+     font-style: italic;
+}
+
+#pulsor {
+    width: 120px;
+    margin: 64px;
+    padding: 16px 32px;
+    font-size: 32px;
+    cursor: auto;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #333;
+}
+button.pulsate {
+    -webkit-animation: pusate 1s infinite alternate;
+    -moz-animation: pusate 1s infinite alternate;
+    -animation: pusate 1s infinite alternate;
+    text-shadow: 0 0 8px #ccc;
+}
+@-webkit-keyframes pusate {
+    from { box-shadow: 0 0 10px #333; }
+    to { box-shadow: 0 0 20px #c00; }
+}
+@-moz-keyframes pusate {
+    from { box-shadow: 0 0 10px #333; }
+    to { box-shadow: 0 0 20px #c00; }
+}
+@keyframes pusate {
+    from { box-shadow: 0 0 10px #333; }
+    to { box-shadow: 0 0 20px #c00; }
 }
