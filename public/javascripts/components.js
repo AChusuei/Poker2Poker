@@ -282,9 +282,6 @@ function(React,   gameController,   constants) {
     });
 
     var UserInterface = React.createClass({
-        // getInitialState: function() {
-        //     return {felt: null};
-        // },
         render: function() {
             if (!this.props.player) return null;
             var options;
@@ -318,83 +315,164 @@ function(React,   gameController,   constants) {
         }
     });
 
+    var getActionMap = function(options, liveBet) {
+        var map = {}; // return more literal map instead? { Fold: ?, etc .}
+        map[PlayerAction.Fold] = (<FoldAction key="Fold" />);
+        map[PlayerAction.Check] = (<CheckAction key="Check" />);
+        map[PlayerAction.Call] = (<CallAction key="Call" options={options} liveBet={liveBet} />);
+        map[PlayerAction.Bet] = (<BetAction key="Bet" options={options} />);
+        map[PlayerAction.Raise] = (<RaiseAction key="Raise" options={options} />);
+        map[PlayerAction.AllIn] = (<AllInAction key="AllIn" />);
+        map[PlayerAction.MuckHand] = (<MuckHandAction key="MuckHand" />);
+        map[PlayerAction.ShowHand] = (<ShowHandAction key="ShowHand" />);
+        map[PlayerAction.StartNextHand] = (<StartNextHandAction key="StartNextHand" />);
+        return map; 
+    }; 
+
     var UserActions = React.createClass({
-        fold: function(e) {
-            gameController.submitPlayerAction(PlayerAction.Fold);
-        },
-        check: function(e) {
-            gameController.submitPlayerAction(PlayerAction.Check);
-        },
-        callBet: function(e) {
-            var amount = Number(this.refs.callAmount.getDOMNode().value.trim());
-            gameController.submitPlayerAction(PlayerAction.Call, amount);
-        },
-        bet: function(e) {
-            var amount = Number(this.refs.betAmount.getDOMNode().value.trim());
-            gameController.submitPlayerAction(PlayerAction.Bet, amount);
-        },
-        raise: function(e) {
-            var amount = Number(this.refs.raiseAmount.getDOMNode().value.trim());
-            gameController.submitPlayerAction(PlayerAction.Raise, amount);
-        },
-        allIn: function(e) {
-            gameController.submitPlayerAction(PlayerAction.AllIn);
-        },
-        muckHand: function(e) {
-            gameController.submitPlayerAction(PlayerAction.MuckHand);
-        },
-        showHand: function(e) {
-            gameController.submitPlayerAction(PlayerAction.ShowHand);
-        },
+        render: function() {
+            var elements = [];
+            var actionMap = getActionMap(this.props.options, this.props.liveBet);
+            _.each(this.props.options.actions, function(action) {
+                elements.push(actionMap[action])
+            }, this);
+            return (
+                <td>{elements}</td>
+            );
+        }
+    });
+
+    var StartNextHandAction = React.createClass({
         startNextHand: function(e) {
             gameController.submitPlayerAction(PlayerAction.StartNextHand);
         },
         render: function() {
-            var elements = [];
-            var bigBlind = this.props.options.bigBlind;
+            return (
+                <ActionButton classType="success" callback={this.startNextHand} text="Start Next Hand"/>
+            );  
+        }
+    });
+
+    var ShowHandAction = React.createClass({
+        showHand: function(e) {
+            gameController.submitPlayerAction(PlayerAction.ShowHand);
+        },
+        render: function() {
+            return (
+                <ActionButton classType="success" callback={this.showHand} text="Show Hand"/>
+            );  
+        }
+    });
+
+    var MuckHandAction = React.createClass({
+        muckHand: function(e) {
+            gameController.submitPlayerAction(PlayerAction.MuckHand);
+        },
+        render: function() {
+            return (
+                <ActionButton classType="danger" callback={this.muckHand} text="Muck Hand"/>
+            );  
+        }
+    });
+
+    var AllInAction = React.createClass({
+        allIn: function(e) {
+            gameController.submitPlayerAction(PlayerAction.AllIn);
+        },
+        render: function() {
+            return (
+                <ActionButton classType="warning" callback={this.allIn} text="All In"/>
+            );  
+        }
+    });
+
+    var BetAction = React.createClass({
+        bet: function(e) {
+            var amount = Number(this.refs.betAmount.getDOMNode().value.trim());
+            gameController.submitPlayerAction(PlayerAction.Bet, amount);
+        },
+        render: function() {
+            return (
+                <span>
+                    <ActionButton classType="info" callback={this.bet} text="Bet" />
+                    <BetInput ref="betAmount" minimumRaise={this.props.options.minimumRaise} bigBlind={this.props.options.bigBlind} />
+                </span>
+            );  
+        }
+    });
+
+    var RaiseAction = React.createClass({
+        raise: function(e) {
+            var amount = Number(this.refs.raiseAmount.getDOMNode().value.trim());
+            gameController.submitPlayerAction(PlayerAction.Raise, amount);
+        },
+        render: function() {
+            return (
+                <span>
+                    <ActionButton classType="info" callback={this.raise} text="Raise" />
+                    <BetInput ref="raiseAmount" minimumRaise={this.props.options.minimumRaise} bigBlind={this.props.options.bigBlind} />
+                </span>
+            );  
+        }
+    });
+
+    var BetInput = React.createClass({
+        render: function() {
+            var buttonClass = "btn btn-" + this.props.classType;
+            return (
+                <input ref={this.props.ref} className="form-control form-control-inline small-width" min={this.props.minimumRaise} defaultValue={this.props.minimumRaise} step={this.props.bigBlind} type="number"/>
+            );  
+        }
+    });
+
+    var CallAction = React.createClass({
+        callTheBet: function(e) {
+            var amount = Number(this.refs.callAmount.getDOMNode().value.trim());
+            gameController.submitPlayerAction(PlayerAction.Call, amount);
+        },
+        render: function() {
             var callBet = this.props.options.callBet;
             var deltaBet = callBet - this.props.liveBet;
-            var minimumRaise = this.props.options.minimumRaise;
-            var callMessage = deltaBet + ' to call' + (callBet !== deltaBet ? ' (' + callBet + ' total)' : '');
-            _.each(this.props.options.actions, function(action) {
-                switch (action) {
-                    case PlayerAction.Fold:
-                        elements.push(<button key="fold" type="button" className="btn btn-danger" onClick={this.fold}>{action}</button>); 
-                        break;
-                    case PlayerAction.Check:
-                        elements.push(<button key="check" type="button" className="btn btn-success" onClick={this.check}>Check</button>);
-                        break;
-                    case PlayerAction.Call:
-                        elements.push(<button key="call" type="button" className="btn btn-success" onClick={this.callBet}>{callMessage}</button>);
-                        elements.push(<input key="callAmount" type="hidden" ref="callAmount" value={callBet}/>);
-                        break;
-                    case PlayerAction.Bet:
-                        elements.push(<button key="bet" type="button" className="btn btn-info" onClick={this.bet}>{action}</button>);
-                        elements.push(<input key="betAmount" ref="betAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} step={bigBlind} type="number"/>);
-                        break;
-                    case PlayerAction.Raise:
-                        elements.push(<button key="raise" type="button" className="btn btn-info" onClick={this.raise}>{action}</button>);
-                        elements.push(<input key="raiseAmount" ref="raiseAmount" className="form-control form-control-inline small-width" min={minimumRaise} defaultValue={minimumRaise} step={bigBlind} type="number"/>);
-                        break;
-                    case PlayerAction.AllIn:
-                        elements.push(<button key="allIn" type="button" className="btn btn-warning" onClick={this.allIn}>{action}</button>);
-                        break;
-                    case PlayerAction.MuckHand:
-                        elements.push(<button key="muckHand" type="button" className="btn btn-danger" onClick={this.muckHand}>Muck Hand</button>);
-                        break;
-                    case PlayerAction.ShowHand:
-                        elements.push(<button key="showHand" type="button" className="btn btn-success" onClick={this.showHand}>Show Hand</button>);
-                        break;
-                    case PlayerAction.StartNextHand:
-                        elements.push(<button key="startNextHand" type="button" className="btn btn-success" onClick={this.startNextHand}>Start Next Hand</button>);
-                        break;
-                }
-            }, this);
+            var message = deltaBet + ' to call' + (callBet !== deltaBet ? ' (' + callBet + ' total)' : '');
             return (
-                <td>
-                    {elements}
-                </td>
-            );
+                <span>
+                    <ActionButton classType="success" callback={this.callTheBet} text={message} />
+                    <input key="callAmount" type="hidden" ref="callAmount" value={callBet}/>
+                </span>
+            );  
+            // <ActionInput ref="callAmount" minimumRaise={this.props.minimumRaise} bigBlind={this.props.bigBlind} />
+        }
+    });
+
+    var CheckAction = React.createClass({
+        check: function(e) {
+            gameController.submitPlayerAction(PlayerAction.Check);
+        },
+        render: function() {
+            
+            return (
+                <ActionButton classType="success" callback={this.check} text="Check"/>
+            );  
+        }
+    });
+
+    var FoldAction = React.createClass({
+        fold: function(e) {
+            gameController.submitPlayerAction(PlayerAction.Fold);
+        },
+        render: function() {
+            return (
+                <ActionButton classType="danger" callback={this.fold} text="Fold"/>
+            );  
+        }
+    });
+
+    var ActionButton = React.createClass({
+        render: function() {
+            var buttonClass = "btn btn-" + this.props.classType;
+            return (
+                <button type="button" className={buttonClass} onClick={this.props.callback}>{this.props.text}</button>
+            );  
         }
     });
 
