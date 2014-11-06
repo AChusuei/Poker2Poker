@@ -1,8 +1,26 @@
 {
   "name": "poker2poker",
+  "version": "0.1.2",
+  "description": "P2P poker game in node",
   "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
-    "express": "~4.5.1",
+    "express": "~4.9.x",
     "lodash": "^2.4.1"
-  }
+  },
+  "engines": {
+    "node": "0.10.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AChusuei/Poker2Poker"
+  },
+  "keywords": [
+    "node",
+    "heroku",
+    "express"
+  ],
+  "license": "MIT"
 }
