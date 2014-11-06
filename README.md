@@ -3,9 +3,9 @@ Texas Hold'Em Poker P2P Game
 
 A P2P Poker application that is designed to work without a central server. 
 
-Well almost, since we're using WebRTC, we still need a signaling server to bootstrap two peers to connect to one another. But once that's done, the game is run completely between peers!
+Well, _almost_ without a central server. Since we're using WebRTC, we still need a signaling server to bootstrap the connection between two peers. But once that's done, all of the data is run completely between peers, without any server needing to broker information!
 
-The application is run in node. To get it working:
+Poker2poker is set up as a node application. To get it working:
 
 1. Install node on your machine.
 2. In the poker2poker directory, run `npm install` to install node modules. 
@@ -13,6 +13,6 @@ The application is run in node. To get it working:
 
 The game should be accessible from http://localhost:8000.
 
-One can also run this just using python. In the `public` directory, run `python -m SimpleHTTPServer` to start the application on port 8000. 
+One can also run this just using python. In the `public` directory, run `python -m SimpleHTTPServer` to start the application on port 8000; the game can then be accessed at http://localhost:8000/game.html.
 
-A demo of the game is available at http://poker2poker.herokuapp.com.
+A public demo of the game is available at http://poker2poker.herokuapp.com.
