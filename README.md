@@ -16,3 +16,10 @@ The game should be accessible from http://localhost:8000.
 One can also run this just using python. In the `public` directory, run `python -m SimpleHTTPServer` to start the application on port 8000; the game can then be accessed at http://localhost:8000/game.html.
 
 A public demo of the game is available at http://poker2poker.herokuapp.com.
+
+To play the game:
+
+1. Start a session, and note the peer ID that comes up. This peer ID identifies you to other players.
+2. Have another person (or yourself) start another session on their own, and connect to their peer ID using the table listed, by inputting their peer ID into the open text field, and clicking `Connect`.
+3. Repeat for as many players as you want. 
+4. Click on `Start Game` to start the game.
