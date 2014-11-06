@@ -1,9 +1,2 @@
-logs
-project/project
-project/target
-target
-tmp
-dist
-.cache
+node_modules
 *.log
-*.DS_Store
