@@ -14,9 +14,9 @@ requirejs.config({
         JSXTransformer: { exports: "JSXTransformer" },
     },
     paths: {
-    	jquery: 'http://code.jquery.com/jquery-1.11.0.min',
-        bootstrap: 'http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min',
-        peer: 'http://cdn.peerjs.com/0.3/peer',
+    	jquery: 'https://code.jquery.com/jquery-1.11.0.min',
+        bootstrap: 'https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min',
+        peer: 'peer',
         React: 'react-with-addons',
         JSXTransformer: 'JSXTransformer-0.11.1',
         jsx: 'jsx',
